@@ -1,29 +1,5 @@
-# cmake_minimum_required(VERSION 3.15)
-# project(Mandelbrot)
-
-# # set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-# set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "vcpkg toolchain file")
-# # set(CMAKE_CXX_STANDARD 17)
-
-# find_package(glfw3 REQUIRED)
-# find_package(glad REQUIRED)
-# # find_package(miniaudio CONFIG REQUIRED)
-
-# find_path(MINIAUDIO_INCLUDE_DIRS "miniaudio.h"
-#     HINTS
-#         "${CMAKE_CURRENT_SOURCE_DIR}/miniaudio" # If you have miniaudio in your source dir
-#         "D:/dev/vcpkg/installed/x64-windows/include" # Replace with your vcpkg include dir
-# )
-
-# add_executable(Mandelbrot main.cpp)
-
-# target_link_libraries(Mandelbrot PRIVATE glfw glad)
-# target_include_directories(Mandelbrot PRIVATE ${MINIAUDIO_INCLUDE_DIRS})
-
-#########
-
 cmake_minimum_required(VERSION 3.15)
-project(HelloWorld)
+project(mandelbrot)
 
 # set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 # set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "vcpkg toolchain file")
@@ -38,23 +14,29 @@ endif()
 
 
 set(SOURCES
-    src/hello.cpp
+    src/main.cpp
     src/glad.c
+    assets/resources.rc
 )
-add_executable(HelloWorld ${SOURCES})
+add_executable(mandelbrot ${SOURCES})
 
 find_package(glfw3 CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(SDL2 CONFIG REQUIRED)
-find_package(SDL2_mixer CONFIG REQUIRED)
+# find_package(SDL2 CONFIG REQUIRED)
+# find_package(SDL2_mixer CONFIG REQUIRED)
 
-
-target_link_libraries(HelloWorld PRIVATE
+target_link_libraries(mandelbrot PRIVATE
     glfw
     OpenGL::GL
-    SDL2::SDL2
-    SDL2::SDL2main
+    # SDL2::SDL2
+    # SDL2::SDL2main
 )
-target_link_libraries(HelloWorld PRIVATE $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>)
+# target_link_libraries(mandelbrot PRIVATE $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>)
 
-target_include_directories(HelloWorld PRIVATE ${PROJECT_SOURCE_DIR}/include)
+if(WIN32 AND CMAKE_BUILD_TYPE MATCHES "Release" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    target_link_options(mandelbrot PRIVATE "-Wl,-subsystem,windows")
+elseif(WIN32 AND CMAKE_BUILD_TYPE MATCHES "Release" AND CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    target_link_options(mandelbrot PRIVATE "/SUBSYSTEM:WINDOWS")
+endif()
+
+target_include_directories(mandelbrot PRIVATE ${PROJECT_SOURCE_DIR}/include)
