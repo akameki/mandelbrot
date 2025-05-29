@@ -9,7 +9,7 @@ uniform float time;
 uniform dvec2 camera;
 uniform double zoom;
 
-int max_iter = 100;
+uniform int iterations;
 
 /*  Mandelbrot set
  *  The set of complex numbers c,
@@ -25,7 +25,7 @@ dvec2 square_complex(dvec2 complex) {
 }
 
 vec4 color(int i) {
-    float pct = 1 - i / float(max_iter);
+    float pct = 1 - i / float(iterations);
     // vec3 pd = vec3(0.9, 1.3, 1.1);
     vec3 pd = 5 * vec3(1.3, 1.1, 0.9); // black-blue
     // vec3 pd = vec3(10.28, 11.0, 9.35);
@@ -34,14 +34,14 @@ vec4 color(int i) {
 
 // returns: # iterations to reach escape condition, capped at 80.
 int mandel(dvec2 z, dvec2 c) {
-    for (int i = 0; i < max_iter; i++) {
+    for (int i = 0; i < iterations; i++) {
         if (length(z) > 2) {
             return i;
         }
         z = square_complex(z) + c;
         // escape condition: modulus > 2
     }
-    return max_iter;
+    return iterations;
 }
 
 void main() {
@@ -53,7 +53,7 @@ void main() {
 
     // show color palette on bottom:
     // if (pos.y < -0.958) FragColor = vec4(0.7,0.7,0.7,1.0);
-    // if (pos.y < -0.96) FragColor = color(max_iter - int(0.5 * max_iter * (pos.x + 1.0)));
+    // if (pos.y < -0.96) FragColor = color(iterations - int(0.5 * iterations * (pos.x + 1.0)));
 }
 
 )";

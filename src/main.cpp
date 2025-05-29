@@ -1,9 +1,13 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include <iostream>
 
-#include "mandelbrot/shader.h"
+#include "shader.h"
 #include "fragment.frag"
 #include "vertex.vert"
 
@@ -51,6 +55,16 @@ int main(int argv, char** args) {
         return -1;
     }
     // std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
+
+    /* ImGui */
+    /* ----- */
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 460");
 
     /* SDL2 */
     /* ---- */
@@ -113,8 +127,34 @@ int main(int argv, char** args) {
     double camera_y = 0.0;
     double zoom = 1.0;
     double pan_speed = 0.02;
+
+
+    int iterations = 80;
+    ImVec4 im_color = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+ 
     
     while (!glfwWindowShouldClose(window)) {
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        bool show_demo_window = true;
+        // ImGui::ShowDemoWindow(&show_demo_window);
+
+        {
+            static int counter = 0;
+            ImGui::Begin("Mandelbrot");
+            ImGui::Text("Some useful text.");
+            ImGui::SliderInt("iterations", &iterations, 1, 500);
+            ImGui::ColorEdit3("color! (nop)", (float*)&im_color);
+            if (ImGui::Button("press me!")) ++counter;
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
+            ImGui::Text("%.1f FPS", io.Framerate);
+            ImGui::End();
+        }
+        
+
         glClearColor(0.12f, 0.1f, 0.12f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT); // Clear the color buffer
         
@@ -135,9 +175,12 @@ int main(int argv, char** args) {
         glUniform1f(glGetUniformLocation(shaderProgram, "time"), glfwGetTime());
         glUniform2d(glGetUniformLocation(shaderProgram, "camera"), camera_x, camera_y);
         glUniform1d(glGetUniformLocation(shaderProgram, "zoom"), zoom);
+        glUniform1i(glGetUniformLocation(shaderProgram, "iterations"), iterations);
 
-        // glDrawArrays(GL_TRIANGLES, 0, 3);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);      // Swap front and back buffers
         glfwPollEvents();             // Process events

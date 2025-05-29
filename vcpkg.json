@@ -1,7 +1,9 @@
 {
-    "dependencies": [
-      "glfw3",
-      "sdl2",
-      "sdl2-mixer"
-    ]
-  }
+  "dependencies": [
+    "glfw3",
+    {
+      "name": "imgui",
+      "features": ["glfw-binding", "opengl3-binding"]
+    }
+  ]
+}
