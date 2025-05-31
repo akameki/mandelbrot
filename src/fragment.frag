@@ -11,6 +11,8 @@ uniform double zoom;
 
 uniform int iterations;
 
+uniform sampler1D palette;
+
 /*  Mandelbrot set
  *  The set of complex numbers c,
  *  for which f_c(z) = z^2 + c does not diverge to infinity when iterated.
@@ -24,36 +26,47 @@ dvec2 square_complex(dvec2 complex) {
     return res;
 }
 
-vec4 color(int i) {
-    float pct = 1 - i / float(iterations);
-    // vec3 pd = vec3(0.9, 1.3, 1.1);
-    vec3 pd = 5 * vec3(1.3, 1.1, 0.9); // black-blue
-    // vec3 pd = vec3(10.28, 11.0, 9.35);
-    return vec4(0.5-(cos(pct * pd))/2, 1.0);
-}
+// vec4 color(int i) {
+//     float pct = 1 - i / float(iterations);
+//     // vec3 pd = vec3(0.9, 1.3, 1.1);
+//     vec3 pd = 5 * vec3(1.3, 1.1, 0.9); // black-blue
+//     // vec3 pd = vec3(10.28, 11.0, 9.35);
+//     return vec4(0.5-(cos(pct * pd))/2, 1.0);
+// }
 
-// returns: # iterations to reach escape condition, capped at 80.
+// returns: # iterations to reach escape condition
+// for true mandelbrot, the parameter z is always 0, it's only ever modified within the loop.
 int mandel(dvec2 z, dvec2 c) {
-    for (int i = 0; i < iterations; i++) {
+    for (int i = 1; i <= iterations; i++) {
+        // escape condition: modulus > 2
+        z = square_complex(z) + c;
         if (length(z) > 2) {
             return i;
         }
-        z = square_complex(z) + c;
-        // escape condition: modulus > 2
     }
-    return iterations;
+    return iterations + 1;
 }
 
 void main() {
     // dvec2 coords = pos.xy * zoom + camera;
     dvec2 coords = camera + dvec2(pos.x * zoom * (double(resolution.x) / double(resolution.y)), pos.y * zoom);
 
-    FragColor = color(mandel(dvec2(0.0,0.0), 2 * coords));
-    
+    // FragColor = color(mandel(dvec2(0.0,0.0), 2 * coords));
 
+    // mandel returns 1 ~ iterations+1
+    float t = mandel(dvec2(0.0,0.0), 2*coords) - 1;
+
+    // if (t == 0.0) {
+    //     FragColor = texture(palette, 0.0);
+    // } else {
+        FragColor = texture(palette, t / float(iterations+1) + 0.00001);
+    // }
+
+    // FragColor = texture(palette, t / float(iterations));
+    
     // show color palette on bottom:
     // if (pos.y < -0.958) FragColor = vec4(0.7,0.7,0.7,1.0);
-    // if (pos.y < -0.96) FragColor = color(iterations - int(0.5 * iterations * (pos.x + 1.0)));
+    // if (pos.y < -0.96) FragColor = texture(palette, (0.5 * (pos.x + 1.0)));
 }
 
 )";

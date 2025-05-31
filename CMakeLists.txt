@@ -11,14 +11,17 @@ endif()
 
 project(mandelbrot)
 
-set(SOURCES
+add_executable(mandelbrot
     src/main.cpp
+    src/shader.cpp
+    src/framebuffer.cpp
+    src/palettes/palette.cpp
     external/glad/glad.c
     assets/resources.rc
 )
-add_executable(mandelbrot ${SOURCES})
 
 find_package(OpenGL REQUIRED)
+find_package(glm REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(imgui REQUIRED)
 # find_package(SDL2 CONFIG REQUIRED)
@@ -26,6 +29,7 @@ find_package(imgui REQUIRED)
 
 target_link_libraries(mandelbrot PRIVATE
     OpenGL::GL
+    glm::glm
     glfw
     imgui::imgui
     # SDL2::SDL2
@@ -33,6 +37,7 @@ target_link_libraries(mandelbrot PRIVATE
 )
 # target_link_libraries(mandelbrot PRIVATE $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>)
 
+# do not create a console when running as .exe
 if(WIN32 AND CMAKE_BUILD_TYPE MATCHES "Release" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     target_link_options(mandelbrot PRIVATE "-Wl,-subsystem,windows")
 elseif(WIN32 AND CMAKE_BUILD_TYPE MATCHES "Release" AND CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
