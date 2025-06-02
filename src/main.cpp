@@ -4,6 +4,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "implot.h"
 
 #include <iostream>
 
@@ -21,8 +22,8 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 bool is_pressed(GLFWwindow* window, int key);
 
-int width = 1000;
-int height = 1000;
+int width = 1200;
+int height = 900;
 
 int main(int argv, char** args) {
     /* GLFW */
@@ -52,6 +53,7 @@ int main(int argv, char** args) {
     /* ----- */
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
     ImGui::StyleColorsDark();
@@ -118,13 +120,14 @@ int main(int argv, char** args) {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    double camera_x = -0.3;
+    double camera_x = 0.0;
     double camera_y = 0.0;
     double zoom = 1.0;
-    double pan_speed = 0.02;
+    const double pan_speed = 0.02;
+    bool show_ui = true;
+    static bool auto_zoom = false;
 
-
-    int iterations = 5;
+    int iterations = 125;
     glUniform1i(shader_program.uniform_location("iterations"), iterations);
 
     ImVec4 im_color = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -138,12 +141,13 @@ int main(int argv, char** args) {
         ImGui::NewFrame();
         bool show_demo_window = true;
         // ImGui::ShowDemoWindow(&show_demo_window);
-
-        {
+        if (show_ui) {
             ImGui::Begin("Mandelbrot");
-            static int counter = 0;
-            ImGui::Text("Some useful text.");
-            if (ImGui::SliderInt("iterations", &iterations, 1, 500)) {
+            // const char* text = "Iterations";
+            // float text_size = ImGui::CalcTextSize(text).x + ImGui::GetStyle().ItemSpacing.x;
+            // ImGui::PushItemWidth(std::max(ImGui::GetContentRegionAvail().x - text_size,0.0f));
+            ImGui::PushItemWidth(-FLT_MIN);
+            if (ImGui::SliderInt("##iterations", &iterations, 1, 500, "Iterations = %d")) {
                 glUniform1i(shader_program.uniform_location("iterations"), iterations);
                 palette.resize(iterations + 1);
             }
@@ -157,9 +161,15 @@ int main(int argv, char** args) {
             // ImGui::Text("counter = %d", counter);
 
             ImGui::SeparatorText("Camera");
-            ImGui::Text("Camera X=%.7f", camera_x);
-            ImGui::Text("Camera Y=%.7f", camera_y);
-            ImGui::Text("Zoom=%.7f", zoom);
+            ImGui::Text("Camera X =%3.10f", camera_x);
+            ImGui::Text("Camera Y =%3.10f", camera_y);
+            ImGui::Text("   Zoom  =%3.10f", zoom);
+            if (ImGui::Checkbox("Auto", &auto_zoom));
+            if (ImGui::Button("Reset")) {
+                camera_x = 0.0;
+                camera_y = 0.0;
+                zoom = 1.0;
+            }
 
             ImGui::Separator();
             ImGui::Text("%.1f FPS", io.Framerate);
@@ -181,7 +191,7 @@ int main(int argv, char** args) {
         glClear(GL_COLOR_BUFFER_BIT); // Clear the color buffer
         
         
-        double zoom_speed = is_pressed(window, GLFW_KEY_SPACE) ? 1.04 : 1.01;
+        double zoom_speed = is_pressed(window, GLFW_KEY_SPACE) ? 1.04 : 1.004;
         double pan_speed = zoom * (is_pressed(window, GLFW_KEY_SPACE) ? 0.05 : 0.02);
         
         if (is_pressed(window, GLFW_KEY_W)) camera_y += pan_speed;
@@ -189,7 +199,8 @@ int main(int argv, char** args) {
         if (is_pressed(window, GLFW_KEY_S)) camera_y -= pan_speed;
         if (is_pressed(window, GLFW_KEY_D)) camera_x += pan_speed;
         if (is_pressed(window, GLFW_KEY_Q)) zoom *= zoom_speed;
-        if (is_pressed(window, GLFW_KEY_E)) zoom /= zoom_speed;
+        if (auto_zoom || is_pressed(window, GLFW_KEY_E)) zoom /= zoom_speed;
+        if (is_pressed(window, GLFW_KEY_TAB)) show_ui = !show_ui;
         if (is_pressed(window, GLFW_KEY_ESCAPE)) break;
         glUniform1f(shader_program.uniform_location("time"), glfwGetTime());
         glUniform2d(shader_program.uniform_location("camera"), camera_x, camera_y);
@@ -210,6 +221,10 @@ int main(int argv, char** args) {
         glfwPollEvents();             // Process events
     }
 
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImPlot::DestroyContext();
+    ImGui::DestroyContext();
     glfwTerminate(); // Clean up GLFW resources
     return 0;
 }

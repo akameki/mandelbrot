@@ -24,6 +24,7 @@ find_package(OpenGL REQUIRED)
 find_package(glm REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(imgui REQUIRED)
+find_package(implot REQUIRED)
 # find_package(SDL2 CONFIG REQUIRED)
 # find_package(SDL2_mixer CONFIG REQUIRED)
 
@@ -32,6 +33,7 @@ target_link_libraries(mandelbrot PRIVATE
     glm::glm
     glfw
     imgui::imgui
+    implot::implot
     # SDL2::SDL2
     # SDL2::SDL2main
 )
