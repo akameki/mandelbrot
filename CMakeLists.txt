@@ -16,6 +16,7 @@ add_executable(mandelbrot
     src/shader.cpp
     src/framebuffer.cpp
     src/palettes/palette.cpp
+    src/settings.cpp
     external/glad/glad.c
     assets/resources.rc
 )

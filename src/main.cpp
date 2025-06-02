@@ -11,6 +11,7 @@
 #include "shader.h"
 #include "framebuffer.h"
 #include "palette.h"
+#include "settings.h"
 
 #include "fragment.frag"
 #include "vertex.vert"
@@ -20,14 +21,9 @@
 // #include "mandelbrot/mystical.h" // music file
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-bool is_pressed(GLFWwindow* window, int key);
-
-int width = 1200;
-int height = 900;
 
 int main(int argv, char** args) {
     /* GLFW */
-    /* ---- */
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         return -1;
@@ -40,9 +36,9 @@ int main(int argv, char** args) {
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetKeyCallback(window, key_callback);
 
     /* GLAD */
-    /* ---- */
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cerr << "Failed to initialize GLAD" << std::endl;
         return -1;
@@ -50,7 +46,6 @@ int main(int argv, char** args) {
     // std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
 
     /* ImGui */
-    /* ----- */
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImPlot::CreateContext();
@@ -61,7 +56,6 @@ int main(int argv, char** args) {
     ImGui_ImplOpenGL3_Init("#version 460");
 
     /* SDL2 */
-    /* ---- */
     // if (SDL_Init(SDL_INIT_AUDIO) < 0) {
     //     std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
     //     return -1;
@@ -75,24 +69,13 @@ int main(int argv, char** args) {
     // Mix_PlayMusic(music, -1);
 
 
-    /* OpenGL Shader */
-    /* ------------- */
+    /* shader program */
     ShaderProgram shader_program;
     if (!shader_program.attach_from_string(GL_VERTEX_SHADER, vertex_shader_str)) return -1;
     if (!shader_program.attach_from_string(GL_FRAGMENT_SHADER, fragment_shader_str)) return -1;
     
     shader_program.link();
     shader_program.use();
-    
-    /* quad */
-    // with border
-    // float vertices[] = {
-    //     -0.95f, -0.95f, 0.0f, // bl
-    //     -0.95f,  0.95f, 0.0f, // tl
-    //      0.95f,  0.95f, 0.0f, // tr
-    //      0.95f, -0.95f, 0.0f, // br
-    // };
-    // no border
 
     // framebuffer to render into.
     // currently not in use.
@@ -120,17 +103,8 @@ int main(int argv, char** args) {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    double camera_x = 0.0;
-    double camera_y = 0.0;
-    double zoom = 1.0;
-    const double pan_speed = 0.02;
-    bool show_ui = true;
-    static bool auto_zoom = false;
-
-    int iterations = 125;
     glUniform1i(shader_program.uniform_location("iterations"), iterations);
 
-    ImVec4 im_color = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
 
     Palette palette(iterations + 1);
     
@@ -148,28 +122,15 @@ int main(int argv, char** args) {
             // ImGui::PushItemWidth(std::max(ImGui::GetContentRegionAvail().x - text_size,0.0f));
             ImGui::PushItemWidth(-FLT_MIN);
             if (ImGui::SliderInt("##iterations", &iterations, 1, 500, "Iterations = %d")) {
-                glUniform1i(shader_program.uniform_location("iterations"), iterations);
                 palette.resize(iterations + 1);
             }
+            // ImVec4 im_color = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
             // ImGui::ColorEdit3("color! (nop)", (float*)&im_color);
             
             // ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
             palette.draw_ui();
-            // if (ImGui::Button("press me!")) ++counter;
-            // ImGui::SameLine();
-            // ImGui::Text("counter = %d", counter);
-
-            ImGui::SeparatorText("Camera");
-            ImGui::Text("Camera X =%3.10f", camera_x);
-            ImGui::Text("Camera Y =%3.10f", camera_y);
-            ImGui::Text("   Zoom  =%3.10f", zoom);
-            if (ImGui::Checkbox("Auto", &auto_zoom));
-            if (ImGui::Button("Reset")) {
-                camera_x = 0.0;
-                camera_y = 0.0;
-                zoom = 1.0;
-            }
+            imgui_camera_ui();
 
             ImGui::Separator();
             ImGui::Text("%.1f FPS", io.Framerate);
@@ -190,23 +151,8 @@ int main(int argv, char** args) {
         glClearColor(0.12f, 0.1f, 0.12f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT); // Clear the color buffer
         
-        
-        double zoom_speed = is_pressed(window, GLFW_KEY_SPACE) ? 1.04 : 1.004;
-        double pan_speed = zoom * (is_pressed(window, GLFW_KEY_SPACE) ? 0.05 : 0.02);
-        
-        if (is_pressed(window, GLFW_KEY_W)) camera_y += pan_speed;
-        if (is_pressed(window, GLFW_KEY_A)) camera_x -= pan_speed;
-        if (is_pressed(window, GLFW_KEY_S)) camera_y -= pan_speed;
-        if (is_pressed(window, GLFW_KEY_D)) camera_x += pan_speed;
-        if (is_pressed(window, GLFW_KEY_Q)) zoom *= zoom_speed;
-        if (auto_zoom || is_pressed(window, GLFW_KEY_E)) zoom /= zoom_speed;
-        if (is_pressed(window, GLFW_KEY_TAB)) show_ui = !show_ui;
+        update_options(window, shader_program);
         if (is_pressed(window, GLFW_KEY_ESCAPE)) break;
-        glUniform1f(shader_program.uniform_location("time"), glfwGetTime());
-        glUniform2d(shader_program.uniform_location("camera"), camera_x, camera_y);
-        glUniform1d(shader_program.uniform_location("zoom"), zoom);
-        glUniform2f(shader_program.uniform_location("resolution"), width, height);
-
         
         shader_program.use();
         // framebuffer.bind();
@@ -233,8 +179,4 @@ void framebuffer_size_callback(GLFWwindow* window, int w, int h) {
     width = w;
     height = h;
     glViewport(0, 0, width, height);
-}
-
-bool is_pressed(GLFWwindow* window, int key) {
-    return glfwGetKey(window, key) != GLFW_RELEASE;
 }

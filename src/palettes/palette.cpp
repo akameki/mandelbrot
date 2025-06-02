@@ -8,15 +8,15 @@
 
 #include "palette.h"
 
-Palette::Palette(int size) : num_colors(size) , reverse(false) {
+Palette::Palette(int size) : num_colors(size) , reversed(false) {
     glGenTextures(1, &texture);
     bind();
 
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER); // to catch bugs
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    float border_color[] = { 1.0f, 0.0f, 0.0f, 1.0f };
+    float border_color[] = { 1.0f, 0.0f, 0.0f, 1.0f }; // to catch bugs
     glTexParameterfv(GL_TEXTURE_1D, GL_TEXTURE_BORDER_COLOR, border_color);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 
     // create color channels
     channels = std::vector<Fn>{Fn("r", 1,0,0), Fn("g", 0,1,0), Fn("b", 0,0,1)};
@@ -32,6 +32,11 @@ Palette::Palette(int size) : num_colors(size) , reverse(false) {
     unbind();
 }
 
+void Palette::reverse() {
+    reversed = !reversed;
+    update();
+}
+
 void Palette::resize(int size) {
     this->num_colors = size;
     update();
@@ -39,12 +44,13 @@ void Palette::resize(int size) {
 
 void Palette::update() {
     colors.resize(num_colors);
-    for (int i = 0; i < num_colors; ++i) {
+    const int generated = num_colors - (int)override;
+    for (int i = 0; i < generated; ++i) {
         // const float pct = (float)i / size;
         // const float pct = i * 0.03;
         // glm::vec3 period = 10.0f * glm::vec3{1.3f, 1.1f, 0.9f};
         // colors[reverse ? num_colors - i - 1 : i] = glm::vec3(0.5f - (glm::cos(2.0f + pct * period)) / 2.0f);
-        colors[reverse ? num_colors - i - 1 : i] = {channels[0](i), channels[1](i), channels[2](i)};
+        colors[reversed ? generated - i - 1 : i] = {channels[0](i), channels[1](i), channels[2](i)};
     }
     if (override) colors.back() = override_color;
     bind();
@@ -58,35 +64,32 @@ void Palette::bind() { glBindTexture(GL_TEXTURE_1D, texture); }
 void Palette::unbind() { glBindTexture(GL_TEXTURE_1D, 0); }
 
 void Palette::draw_ui() {
-    ImGui::Text("Color Palette");
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    float height = ImGui::GetFrameHeight();
-    ImVec2 rect_size(ImGui::CalcItemWidth(), height); 
-    ImVec2 p0 = ImGui::GetCursorScreenPos(); // top left
-    ImVec2 p1 = ImVec2(p0.x + rect_size.x, p0.y + rect_size.y); // bottom right
-    
-    // Draw the current palette
-    for (int i = 0; i < num_colors - 1; i++) {
-        glm::vec3 col = colors[i];
-        ImVec2 rect_p0(p0.x + (rect_size.x * i/(num_colors-1)), p0.y);
-        ImVec2 rect_p1(p0.x + (rect_size.x * (i+1)/(num_colors-1)), p1.y);
-        draw_list->AddRectFilled(rect_p0, rect_p1, IM_COL32(col.r*255, col.g*255, col.b*255, 255));
+    ImGui::SeparatorText("Palette");
+    // Palette preview
+    {
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        float height = ImGui::GetFrameHeight();
+        ImVec2 rect_size(ImGui::CalcItemWidth(), height);
+        ImVec2 p0 = ImGui::GetCursorScreenPos(); // top left
+        ImVec2 p1 = ImVec2(p0.x + rect_size.x, p0.y + rect_size.y); // bottom right
+        
+        const int generated = num_colors - (int)override;
+        for (int i = 0; i < generated; i++) {
+            glm::vec3 col = colors[i];
+            ImVec2 rect_p0(p0.x + (rect_size.x * i/generated), p0.y);
+            ImVec2 rect_p1(p0.x + (rect_size.x * (i+1)/generated), p1.y);
+            draw_list->AddRectFilled(rect_p0, rect_p1, IM_COL32(col.r*255, col.g*255, col.b*255, 255));
+        }
+        ImGui::InvisibleButton("##palette0", rect_size);
     }
 
-    // TODO: fix sizing
-    
-    ImGui::InvisibleButton("##palette0", rect_size);
+    if (ImGui::Button("Reverse")) reverse(); ImGui::SameLine();
+    if (ImGui::Checkbox("override set color", &override)) update();
+    ImGuiColorEditFlags color_edit_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel;
     ImGui::SameLine();
-    p0 = ImGui::GetCursorScreenPos();
-    draw_list->AddRectFilled({p0.x, p0.y}, {p0.x + 2, p1.y}, IM_COL32(0,0,0,0));
-    glm::vec3 col = colors.back(); // last color (color of mandelbrot set; bailout not reached)
-    draw_list->AddRectFilled({p0.x + 2, p0.y}, {p0.x + 2 + height, p1.y}, IM_COL32(col.r*255, col.g*255, col.b*255, 255));
-    ImGui::InvisibleButton("##idk", {height+2, height});
-    if (ImGui::Button("Invert")) {
-        reverse = !reverse;
-        update();
-    }
+    if (ImGui::ColorEdit3("##override", (float*)&override_color, color_edit_flags)) update();
 
+    // Palette channels
     {
         ImPlotStyle& style = ImPlot::GetStyle();
         style.PlotPadding = ImVec2(0, 0);
@@ -101,16 +104,15 @@ void Palette::draw_ui() {
         if (ImPlot::BeginPlot("##Line Plots", ImVec2(ImGui::CalcItemWidth(), 100))) {
             ImGui::Text("Hello!!");
             ImPlot::SetupAxes("iterations", "y", xflags, yflags);
+            // TODO: move to update()
             for (Fn& channel : channels) {
                 static float xs1[1001], ys1[1001];
                 for (int i = 0; i < num_colors; ++i) {
                     xs1[i] = i;
-                    ys1[i] = channel(reverse ? num_colors - i - 1 : i);
+                    ys1[i] = channel(reversed ? num_colors - i - 1 : i);
                 }
                 ImPlot::SetNextLineStyle(ImVec4(channel.r, channel.g, channel.b, 1));
                 ImPlot::PlotLine(channel.label.c_str(), xs1, ys1, num_colors);
-                // ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
-                // ImPlot::PlotLine("g(x)", xs2, ys2, 20,ImPlotLineFlags_Segments);
 
             }
             ImPlot::EndPlot();

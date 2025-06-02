@@ -24,7 +24,7 @@ private:
     int num_colors;
     std::vector<Fn> channels;
     std::vector<glm::vec3> colors;
-    bool reverse = false;
+    bool reversed = false;
     bool override = true;
     glm::vec3 override_color {0.0f, 0.0f, 0.0f};
 
@@ -32,6 +32,7 @@ public:
 
     Palette(int size);
 
+    void reverse();
     void resize(int size);
     void update();
     void bind();
