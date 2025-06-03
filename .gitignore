@@ -1,4 +1,5 @@
 /build/
+/build-win64/
 /.vscode/
 /ignore/
 imgui.ini

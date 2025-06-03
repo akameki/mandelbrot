@@ -49,7 +49,9 @@ int main(int argv, char** args) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImPlot::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGuiIO& imGuiIO = ImGui::GetIO(); (void)imGuiIO;
+    imGuiIO.IniFilename = NULL;
+    imGuiIO.LogFilename = NULL;
 
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -133,7 +135,7 @@ int main(int argv, char** args) {
             imgui_camera_ui();
 
             ImGui::Separator();
-            ImGui::Text("%.1f FPS", io.Framerate);
+            ImGui::Text("%.1f FPS", imGuiIO.Framerate);
 
             ImGui::End();
         }

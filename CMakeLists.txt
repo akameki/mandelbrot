@@ -3,12 +3,6 @@ cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(DEFINED ENV{VCPKG_TOOLCHAIN_FILE})
-    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_TOOLCHAIN_FILE}" CACHE STRING "vcpkg toolchain file")
-else()
-    message(FATAL_ERROR "VCPKG_TOOLCHAIN_FILE environment variable not set. Please set it to the path of vcpkg.cmake, like \"...path/to/vcpkg/scripts/buildsystems/vcpkg.cmake\"")
-endif()
-
 project(mandelbrot)
 
 add_executable(mandelbrot
@@ -22,10 +16,10 @@ add_executable(mandelbrot
 )
 
 find_package(OpenGL REQUIRED)
-find_package(glm REQUIRED)
-find_package(glfw3 REQUIRED)
-find_package(imgui REQUIRED)
-find_package(implot REQUIRED)
+find_package(glm CONFIG REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
+find_package(implot CONFIG REQUIRED)
 # find_package(SDL2 CONFIG REQUIRED)
 # find_package(SDL2_mixer CONFIG REQUIRED)
 
