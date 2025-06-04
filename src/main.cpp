@@ -22,7 +22,18 @@
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
-int main(int argv, char** args) {
+
+#ifdef _WIN32
+#include <windows.h>
+int main(int argc, char** argv);
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    char* argv[] = { nullptr };
+    return main(0, argv);
+}
+#endif
+
+
+int main(int argc, char** argv) {
     /* GLFW */
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;

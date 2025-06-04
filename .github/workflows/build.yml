@@ -2,7 +2,7 @@ name: Build (Linux & Windows, Static & Dynamic)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main actions-testing ]
   pull_request:
     branches: [ main ]
 
@@ -17,7 +17,15 @@ jobs:
           submodules: recursive
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+        run: >
+          sudo apt-get update &&
+          sudo apt-get install -y
+          libgl1-mesa-dev
+          libx11-dev
+          libxrandr-dev
+          libxinerama-dev
+          libxcursor-dev
+          libxi-dev
 
       - name: Set up CMake
         uses: lukka/get-cmake@latest
@@ -26,7 +34,11 @@ jobs:
         run: ./vcpkg/bootstrap-vcpkg.sh
 
       - name: Configure CMake
-        run: cmake -B build-linux -G Ninja -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-linux -DCMAKE_BUILD_TYPE=Release
+        run: >
+          cmake -B build-linux
+          -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DVCPKG_TARGET_TRIPLET=x64-linux
+          -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build-linux --config Release
@@ -34,8 +46,8 @@ jobs:
       - name: Upload Linux Binary
         uses: actions/upload-artifact@v4
         with:
-          name: linux-binary
-          path: build-linux/*
+          name: mandelbrot_x64_linux
+          path: build-linux/mandelbrot
 
   build-windows-static:
     runs-on: windows-latest
@@ -56,11 +68,11 @@ jobs:
           echo "VCPKG_ROOT=$env:GITHUB_WORKSPACE\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Configure CMake
-        run: |
-          cmake -B build-static `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
-            -DCMAKE_BUILD_TYPE=Release
+        run: >
+          cmake -B build-static 
+          -DCMAKE_TOOLCHAIN_FILE=".\vcpkg\scripts\buildsystems\vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          -DCMAKE_BUILD_TYPE=Release
 
       - name: Build (static)
         run: cmake --build build-static --config Release
@@ -68,8 +80,8 @@ jobs:
       - name: Upload Windows Static Binary
         uses: actions/upload-artifact@v4
         with:
-          name: windows-static-binary
-          path: build-static/*.exe
+          name: mandelbrot_x64_win_static
+          path: build-static/Release/mandelbrot.exe
 
   build-windows-dynamic:
     runs-on: windows-latest
@@ -87,14 +99,14 @@ jobs:
         run: |
           # Bootstrap vcpkg (Windows)
           .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
-          echo "VCPKG_ROOT=$env:GITHUB_WORKSPACE\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "VCPKG_ROOT=${{ github.workspace }}\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Configure CMake
-        run: |
-          cmake -B build-dynamic `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows`
-            -DCMAKE_BUILD_TYPE=Release
+        run: >
+          cmake -B build-dynamic
+          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows
+          -DCMAKE_BUILD_TYPE=Release
 
       - name: Build (Dynamic)
         run: cmake --build build-dynamic --config Release
@@ -102,5 +114,5 @@ jobs:
       - name: Upload Windows Dynamic Binary
         uses: actions/upload-artifact@v4
         with:
-          name: windows-dynamic-binary
-          path: build-dynamic/*.exe
+          name: mandelbrot_x64_win_dynamic
+          path: build-dynamic/Release/mandelbrot.exe
