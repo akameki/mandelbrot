@@ -17,7 +17,15 @@ jobs:
           submodules: recursive
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+        run: >
+          sudo apt-get update &&
+          sudo apt-get install -y
+            libgl1-mesa-dev
+            libx11-dev
+            libxrandr-dev
+            libxinerama-dev
+            libxcursor-dev
+            libxi-dev
 
       - name: Set up CMake
         uses: lukka/get-cmake@latest
@@ -26,7 +34,11 @@ jobs:
         run: ./vcpkg/bootstrap-vcpkg.sh
 
       - name: Configure CMake
-        run: cmake -B build-linux -G Ninja -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-linux -DCMAKE_BUILD_TYPE=Release
+        run: >
+          cmake -B build-linux
+            -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+            -DVCPKG_TARGET_TRIPLET=x64-linux
+            -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build-linux --config Release
@@ -56,10 +68,10 @@ jobs:
           echo "VCPKG_ROOT=$env:GITHUB_WORKSPACE\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Configure CMake
-        run: |
-          cmake -B build-static `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
+        run: >
+          cmake -B build-static 
+            -DCMAKE_TOOLCHAIN_FILE=".\vcpkg\scripts\buildsystems\vcpkg.cmake"
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Build (static)
@@ -87,13 +99,13 @@ jobs:
         run: |
           # Bootstrap vcpkg (Windows)
           .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
-          echo "VCPKG_ROOT=$env:GITHUB_WORKSPACE\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "VCPKG_ROOT=${{ github.workspace }}\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Configure CMake
-        run: |
-          cmake -B build-dynamic `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows`
+        run: >
+          cmake -B build-dynamic
+            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"
+            -DVCPKG_TARGET_TRIPLET=x64-windows
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Build (Dynamic)
