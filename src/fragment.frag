@@ -50,8 +50,8 @@ int mandel(dvec2 z, dvec2 c) {
 void main() {
     double aspect = double(resolution.x) / double(resolution.y);
     dvec2 coords = camera + dvec2(
-        pos.x * zoom * aspect, 
-        pos.y * zoom
+        pos.x * 1.0/zoom * aspect, 
+        pos.y * 1.0/zoom
     );
     // mandel returns 1 ~ iterations+1
     float t = mandel(dvec2(0.0,0.0), coords) - 1;

@@ -4,15 +4,18 @@
 #include <vector>
 #include <string>
 
+    // `0.5f + 0.5f * cos(x_offset + iteration * x_scale + time_scale*secs);`
 struct Fn {
     std::string label;
     float r, g, b;
     float x_offset = 0.0f;
     float x_scale = 0.3f;
-    float y_scale = 1.0f;
+    float t_scale = 1.0f;
+    bool show_controls = true;
     
     Fn(std::string label, float r, float g, float b);
     float operator()(float iteration);
+    void draw_ui();
 };
 
 // Manages a 1D texture of RGB colors, and the UI to control it.

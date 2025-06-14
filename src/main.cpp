@@ -187,6 +187,7 @@ int main(int argc, char** argv) {
             if (is_pressed(app.window, GLFW_KEY_ESCAPE)) break;
             
             app.shader_program.use();
+            palette.update();
             palette.bind();
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         }

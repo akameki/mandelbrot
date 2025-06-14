@@ -7,6 +7,7 @@
 #include <string>
 
 #include "palette.h"
+#include "constants.h"
 
 Palette::Palette(int size) : num_colors(size) , reversed(false) {
     glGenTextures(1, &texture);
@@ -44,12 +45,8 @@ void Palette::resize(int size) {
 
 void Palette::update() {
     colors.resize(num_colors);
-    const int generated = num_colors - (int)override;
+    const int generated = num_colors;
     for (int i = 0; i < generated; ++i) {
-        // const float pct = (float)i / size;
-        // const float pct = i * 0.03;
-        // glm::vec3 period = 10.0f * glm::vec3{1.3f, 1.1f, 0.9f};
-        // colors[reverse ? num_colors - i - 1 : i] = glm::vec3(0.5f - (glm::cos(2.0f + pct * period)) / 2.0f);
         colors[reversed ? generated - i - 1 : i] = {channels[0](i), channels[1](i), channels[2](i)};
     }
     if (override) colors.back() = override_color;
@@ -73,7 +70,7 @@ void Palette::draw_ui() {
         ImVec2 p0 = ImGui::GetCursorScreenPos(); // top left
         ImVec2 p1 = ImVec2(p0.x + rect_size.x, p0.y + rect_size.y); // bottom right
         
-        const int generated = num_colors - (int)override;
+        const int generated = num_colors - 1;
         for (int i = 0; i < generated; i++) {
             glm::vec3 col = colors[i];
             ImVec2 rect_p0(p0.x + (rect_size.x * i/generated), p0.y);
@@ -82,21 +79,22 @@ void Palette::draw_ui() {
         }
         ImGui::InvisibleButton("##palette0", rect_size);
     }
-    // Palette channels
-    {
+    if (ImGui::TreeNodeEx("Edit", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
+        /* Channel graph */
         ImPlotStyle& style = ImPlot::GetStyle();
         style.PlotPadding = ImVec2(0, 0);
 
         static ImPlotAxisFlags xflags = ImPlotAxisFlags_AutoFit
-                                      | ImPlotAxisFlags_NoLabel
-                                      | ImPlotAxisFlags_NoGridLines
-                                      | ImPlotAxisFlags_NoTickMarks
-                                      | ImPlotAxisFlags_NoTickLabels;
+                                        | ImPlotAxisFlags_NoLabel
+                                        | ImPlotAxisFlags_NoGridLines
+                                        | ImPlotAxisFlags_NoTickMarks
+                                        | ImPlotAxisFlags_NoTickLabels;
         static ImPlotAxisFlags yflags = ImPlotAxisFlags_NoLabel
-                                      | ImPlotAxisFlags_NoTickLabels
-                                      | ImPlotAxisFlags_NoGridLines
-                                      | ImPlotAxisFlags_Lock
-                                      | ImPlotAxisFlags_NoTickMarks;
+                                        | ImPlotAxisFlags_NoTickLabels
+                                        | ImPlotAxisFlags_NoGridLines
+                                        | ImPlotAxisFlags_Lock
+                                        | ImPlotAxisFlags_NoTickMarks;
 
         if (ImPlot::BeginPlot("##Line Plots", ImVec2(ImGui::CalcItemWidth(), 50))) {
             ImGui::Text("Hello!!");
@@ -115,19 +113,100 @@ void Palette::draw_ui() {
             ImPlot::EndPlot();
         }
 
-    if (ImGui::Button("Reverse")) reverse(); ImGui::SameLine();
-    if (ImGui::Checkbox("override set color", &override)) update();
-    ImGuiColorEditFlags color_edit_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel;
-    ImGui::SameLine();
-    if (ImGui::ColorEdit3("##override", (float*)&override_color, color_edit_flags)) update();
-
-    }
+        /* Channel Controls */
+        for (Fn& channel : channels) {
+            channel.draw_ui();
+        }
     
+        /* Options */
+        if (ImGui::Button("Reverse")) reverse(); ImGui::SameLine();
+        ImGui::SameLine();
+        ImGui::Text("Set Color:");
+        ImGui::SameLine();
+        if (override) {
+            ImGuiColorEditFlags color_edit_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel;
+            if (ImGui::ColorEdit3("Static Set Color##set_color", (float*)&override_color, color_edit_flags)) update();
+        } else {
+            ImGuiColorEditFlags color_edit_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoPicker;
+            if (ImGui::ColorEdit3("Set color##set_color", (float*)&colors.back(), color_edit_flags)) update();
+        }
+        ImGui::SameLine();
+        if (ImGui::Checkbox("static", &override)) update();
+
+        ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
+        ImGui::TreePop();
+    }
     // TODO: tooltip
 }
 
 Fn::Fn(std::string label, float r, float g, float b) : r(r) , g(g) , b(b) {}
 
 float Fn::operator()(float iteration) {
-    return 0.5f + 0.5f * glm::cos(x_offset + iteration * x_scale);
+    return 0.5f + 0.5f * glm::cos(x_offset + iteration * x_scale + t_scale * ImGui::GetTime());
+}
+
+// void Fn::draw_ui() {
+//     ImGui::PushID(this); // Ensure unique IDs for each channel
+    
+//     // Channel color indicator and toggle
+//     ImVec4 color(r, g, b, 1.0f);
+//     ImGui::ColorButton(label.c_str(), color, ImGuiColorEditFlags_NoTooltip, ImVec2(15,15));
+//     ImGui::SameLine();
+//     if (ImGui::Button(("hi" + label).c_str())) {
+//         show_controls = !show_controls;
+//     }
+    
+//     if (show_controls) {
+//         ImGui::Indent();
+        
+//         // Function display
+//         ImGui::Text("cos(%.3f + %.3fx + %.3ft)", x_offset, x_scale, t_scale);
+        
+//         // Parameter controls
+//         ImGui::PushItemWidth(100);
+//         ImGui::DragFloat("X Offset", &x_offset, 0.01f, -10.0f, 10.0f, "%.3f");
+//         ImGui::SameLine();
+//         ImGui::DragFloat("X Scale", &x_scale, 0.001f, -1.0f, 1.0f, "%.3f");
+//         ImGui::SameLine();
+//         ImGui::DragFloat("Time", &t_scale, 0.01f, -10.0f, 10.0f, "%.3f");
+//         ImGui::PopItemWidth();
+        
+//         ImGui::Unindent();
+//     }
+    
+//     ImGui::PopID();
+// }
+
+void Fn::draw_ui() {
+    ImGui::PushID(this);
+    
+    // Compact color channel controls
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 2));
+    ImGui::PushItemWidth(40.f);
+    
+    // Color indicator button (fixed width)
+    ImGui::AlignTextToFramePadding();
+    ImVec4 color(r, g, b, 1.0f);
+    ImGui::ColorButton("##color", color, ImGuiColorEditFlags_NoTooltip, ImVec2(12, 12));
+    ImGui::SameLine();
+    
+    // Compact input controls
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("cos(");
+    ImGui::SameLine();
+    ImGui::DragFloat("##xoff", &x_offset, 0.01f, 0, PI, "%4.2f");
+    ImGui::SameLine();
+    ImGui::Text(" ");
+    ImGui::SameLine();
+    ImGui::DragFloat("##xscale", &x_scale, 0.001f, -1.f, 1.f, "%+5.2f");
+    ImGui::SameLine();
+    ImGui::Text("i ");
+    ImGui::SameLine();
+    ImGui::DragFloat("##time", &t_scale, 0.01f, -10.f, 10.f, "%+5.2f");
+    ImGui::SameLine();
+    ImGui::Text("t)");
+    ImGui::PopItemWidth();
+    
+    ImGui::PopStyleVar();
+    ImGui::PopID();
 }

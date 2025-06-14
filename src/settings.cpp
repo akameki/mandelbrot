@@ -9,7 +9,7 @@ int width = 1200;
 int height = 900;
 double camera_x = 0.0;
 double camera_y = 0.0;
-double zoom = 1.0;
+double zoom = 0.5;
 int iterations = 125;
 
 // other globals
@@ -32,8 +32,8 @@ void update_options(GLFWwindow* window) {
     if (is_pressed(window, GLFW_KEY_A)) camera_x -= pan_speed * zoom;
     if (is_pressed(window, GLFW_KEY_S)) camera_y -= pan_speed * zoom;
     if (is_pressed(window, GLFW_KEY_D)) camera_x += pan_speed * zoom;
-    if (auto_zoom_out || is_pressed(window, GLFW_KEY_Q)) zoom *= zoom_speed;
-    if (auto_zoom_in || is_pressed(window, GLFW_KEY_E)) zoom /= zoom_speed;
+    if (auto_zoom_out || is_pressed(window, GLFW_KEY_Q)) zoom /= zoom_speed;
+    if (auto_zoom_in || is_pressed(window, GLFW_KEY_E)) zoom *= zoom_speed;
 
     if (is_dragging) {
         double mouse_x, mouse_y;
@@ -43,8 +43,8 @@ void update_options(GLFWwindow* window) {
         double dy = (mouse_y - last_mouse_y) * 2.0 / height;
         
         double aspect = (double)width / (double)height;
-        camera_x -= dx * aspect * zoom;
-        camera_y += dy * zoom;
+        camera_x -= dx * aspect * 1.0/zoom;
+        camera_y += dy * 1.0/zoom;
         
         last_mouse_x = mouse_x;
         last_mouse_y = mouse_y;
@@ -92,7 +92,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     ImGuiIO& io = ImGui::GetIO();
     if (io.WantCaptureMouse) return; // Don't handle if ImGui is using the mouse
     
-    double zoom_factor = (yoffset > 0) ? 0.9 : 1.1;
+    double zoom_factor = (yoffset < 0) ? 0.9 : 1.1;
     
     double mouse_x, mouse_y;
     glfwGetCursorPos(window, &mouse_x, &mouse_y);
@@ -101,13 +101,13 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     double fractal_mouse_x = ((mouse_x / width) * 2.0 - 1.0) * aspect;
     double fractal_mouse_y = 1.0 - (mouse_y / height) * 2.0;
 
-    double fractal_target_x = camera_x + fractal_mouse_x * zoom;
-    double fractal_target_y = camera_y + fractal_mouse_y * zoom;
+    double fractal_target_x = camera_x + fractal_mouse_x / zoom;
+    double fractal_target_y = camera_y + fractal_mouse_y / zoom;
 
     zoom *= zoom_factor;
 
-    camera_x = fractal_target_x - fractal_mouse_x * zoom;
-    camera_y = fractal_target_y - fractal_mouse_y * zoom;
+    camera_x = fractal_target_x - fractal_mouse_x / zoom;
+    camera_y = fractal_target_y - fractal_mouse_y / zoom;
 }
 
 void imgui_camera_ui() {
@@ -132,7 +132,7 @@ void imgui_camera_ui() {
 
     if (ImGui::Button("Reset")) {
         camera_x = camera_y = 0.0;
-        zoom = 1.0;
+        zoom = 0.5;
         auto_zoom_in = auto_zoom_out = false;
     }
 }
