@@ -30,7 +30,7 @@ private:
 
 public:
 
-    Palette(int size);
+    Palette(int size = 100);
 
     void reverse();
     void resize(int size);

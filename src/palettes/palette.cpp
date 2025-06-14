@@ -82,13 +82,6 @@ void Palette::draw_ui() {
         }
         ImGui::InvisibleButton("##palette0", rect_size);
     }
-
-    if (ImGui::Button("Reverse")) reverse(); ImGui::SameLine();
-    if (ImGui::Checkbox("override set color", &override)) update();
-    ImGuiColorEditFlags color_edit_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel;
-    ImGui::SameLine();
-    if (ImGui::ColorEdit3("##override", (float*)&override_color, color_edit_flags)) update();
-
     // Palette channels
     {
         ImPlotStyle& style = ImPlot::GetStyle();
@@ -96,12 +89,16 @@ void Palette::draw_ui() {
 
         static ImPlotAxisFlags xflags = ImPlotAxisFlags_AutoFit
                                       | ImPlotAxisFlags_NoLabel
+                                      | ImPlotAxisFlags_NoGridLines
+                                      | ImPlotAxisFlags_NoTickMarks
                                       | ImPlotAxisFlags_NoTickLabels;
         static ImPlotAxisFlags yflags = ImPlotAxisFlags_NoLabel
                                       | ImPlotAxisFlags_NoTickLabels
+                                      | ImPlotAxisFlags_NoGridLines
+                                      | ImPlotAxisFlags_Lock
                                       | ImPlotAxisFlags_NoTickMarks;
 
-        if (ImPlot::BeginPlot("##Line Plots", ImVec2(ImGui::CalcItemWidth(), 100))) {
+        if (ImPlot::BeginPlot("##Line Plots", ImVec2(ImGui::CalcItemWidth(), 50))) {
             ImGui::Text("Hello!!");
             ImPlot::SetupAxes("iterations", "y", xflags, yflags);
             // TODO: move to update()
@@ -111,12 +108,19 @@ void Palette::draw_ui() {
                     xs1[i] = i;
                     ys1[i] = channel(reversed ? num_colors - i - 1 : i);
                 }
-                ImPlot::SetNextLineStyle(ImVec4(channel.r, channel.g, channel.b, 1));
+                ImPlot::SetNextLineStyle(ImVec4(channel.r, channel.g, channel.b, 0.75));
                 ImPlot::PlotLine(channel.label.c_str(), xs1, ys1, num_colors);
 
             }
             ImPlot::EndPlot();
         }
+
+    if (ImGui::Button("Reverse")) reverse(); ImGui::SameLine();
+    if (ImGui::Checkbox("override set color", &override)) update();
+    ImGuiColorEditFlags color_edit_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel;
+    ImGui::SameLine();
+    if (ImGui::ColorEdit3("##override", (float*)&override_color, color_edit_flags)) update();
+
     }
     
     // TODO: tooltip

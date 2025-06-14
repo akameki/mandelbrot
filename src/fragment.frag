@@ -48,25 +48,17 @@ int mandel(dvec2 z, dvec2 c) {
 }
 
 void main() {
-    // dvec2 coords = pos.xy * zoom + camera;
-    dvec2 coords = camera + dvec2(pos.x * zoom * (double(resolution.x) / double(resolution.y)), pos.y * zoom);
-
-    // FragColor = color(mandel(dvec2(0.0,0.0), 2 * coords));
-
+    double aspect = double(resolution.x) / double(resolution.y);
+    dvec2 coords = camera + dvec2(
+        pos.x * zoom * aspect, 
+        pos.y * zoom
+    );
     // mandel returns 1 ~ iterations+1
-    float t = mandel(dvec2(0.0,0.0), 2*coords) - 1;
-
-    // if (t == 0.0) {
-    //     FragColor = texture(palette, 0.0);
-    // } else {
-        FragColor = texture(palette, t / float(iterations+1) + 0.00001);
-    // }
-
-    // FragColor = texture(palette, t / float(iterations));
-    
+    float t = mandel(dvec2(0.0,0.0), coords) - 1;
+    FragColor = texture(palette, t / float(iterations+1) + 0.000001);
+}
     // show color palette on bottom:
     // if (pos.y < -0.958) FragColor = vec4(0.7,0.7,0.7,1.0);
     // if (pos.y < -0.96) FragColor = texture(palette, (0.5 * (pos.x + 1.0)));
-}
 
 )";

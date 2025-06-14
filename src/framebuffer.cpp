@@ -50,3 +50,15 @@ FrameBuffer::~FrameBuffer() {
     glDeleteTextures(1, &texture_id);
     glDeleteRenderbuffers(1, &renderbuffer_id);
 }
+
+
+// example of rendering framebuffer to ImGui image
+
+// {
+//     ImGui::Begin("Scene");
+//     const float win_width = ImGui::GetContentRegionAvail().x;
+//     const float win_height = ImGui::GetContentRegionAvail().y;
+//     framebuffer.rescale(win_width, win_height);
+//     ImGui::Image((ImTextureID)framebuffer.texture_id, ImGui::GetContentRegionAvail(), ImVec2(0,1), ImVec2(1,0));
+//     ImGui::End();
+// }

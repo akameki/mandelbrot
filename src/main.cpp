@@ -7,6 +7,7 @@
 #include "implot.h"
 
 #include <iostream>
+#include <thread>
 
 #include "shader.h"
 #include "framebuffer.h"
@@ -32,6 +33,31 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 }
 #endif
 
+class App {
+public:
+    GLFWwindow* window;
+    ShaderProgram shader_program;
+    // Palette palette;
+
+    // App() {}
+};
+
+// void renderThread(App* app) {
+//     glfwMakeContextCurrent(app->window);
+//     while (!glfwWindowShouldClose(app->window)) {
+//         update_uniforms(app->window, app->shader_program);
+//         glClearColor(0.12f, 0.1f, 0.12f, 1.0f);
+//         glClear(GL_COLOR_BUFFER_BIT); // Clear the color buffer
+        
+//         if (is_pressed(app->window, GLFW_KEY_ESCAPE)) break;
+        
+//         app->shader_program.use();
+//         app->palette.bind();
+        
+//         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+//         // glfwSwapBuffers(app->window);      // Swap front and back buffers
+//     }
+// }
 
 int main(int argc, char** argv) {
     /* GLFW */
@@ -48,6 +74,8 @@ int main(int argc, char** argv) {
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetKeyCallback(window, key_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
     /* GLAD */
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -81,14 +109,15 @@ int main(int argc, char** argv) {
     // Mix_Music* music = Mix_LoadMUS_RW(rw, 1);
     // Mix_PlayMusic(music, -1);
 
+    App app;
+    app.window = window;
 
     /* shader program */
-    ShaderProgram shader_program;
-    if (!shader_program.attach_from_string(GL_VERTEX_SHADER, vertex_shader_str)) return -1;
-    if (!shader_program.attach_from_string(GL_FRAGMENT_SHADER, fragment_shader_str)) return -1;
+    if (!app.shader_program.attach_from_string(GL_VERTEX_SHADER, vertex_shader_str)) return -1;
+    if (!app.shader_program.attach_from_string(GL_FRAGMENT_SHADER, fragment_shader_str)) return -1;
     
-    shader_program.link();
-    shader_program.use();
+    app.shader_program.link();
+    app.shader_program.use();
 
     // framebuffer to render into.
     // currently not in use.
@@ -116,13 +145,18 @@ int main(int argc, char** argv) {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    glUniform1i(shader_program.uniform_location("iterations"), iterations);
+    glUniform1i(app.shader_program.uniform_location("iterations"), iterations);
 
+    
+    // std::thread renderer(renderThread, &app);
+
+    // glfwSwapInterval(0); // disable vsync
 
     Palette palette(iterations + 1);
     
-    while (!glfwWindowShouldClose(window)) {
-
+    while (!glfwWindowShouldClose(app.window)) {
+        glfwPollEvents();             // Process events
+        
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -130,54 +164,36 @@ int main(int argc, char** argv) {
         // ImGui::ShowDemoWindow(&show_demo_window);
         if (show_ui) {
             ImGui::Begin("Mandelbrot");
-            // const char* text = "Iterations";
-            // float text_size = ImGui::CalcTextSize(text).x + ImGui::GetStyle().ItemSpacing.x;
-            // ImGui::PushItemWidth(std::max(ImGui::GetContentRegionAvail().x - text_size,0.0f));
+            // ImDrawList* draw_list = ImGui::GetWindowDrawList();
             ImGui::PushItemWidth(-FLT_MIN);
             if (ImGui::SliderInt("##iterations", &iterations, 1, 500, "Iterations = %d")) {
                 palette.resize(iterations + 1);
             }
-            // ImVec4 im_color = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
-            // ImGui::ColorEdit3("color! (nop)", (float*)&im_color);
-            
-            // ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
             palette.draw_ui();
             imgui_camera_ui();
-
             ImGui::Separator();
             ImGui::Text("%.1f FPS", imGuiIO.Framerate);
-
+            
             ImGui::End();
         }
+        
+        update_options(app.window);
 
-        // {
-        //     ImGui::Begin("Scene");
-        //     const float win_width = ImGui::GetContentRegionAvail().x;
-        //     const float win_height = ImGui::GetContentRegionAvail().y;
-        //     framebuffer.rescale(win_width, win_height);
-        //     ImGui::Image((ImTextureID)framebuffer.texture_id, ImGui::GetContentRegionAvail(), ImVec2(0,1), ImVec2(1,0));
-        //     ImGui::End();
-        // }
-        
-        
-        glClearColor(0.12f, 0.1f, 0.12f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT); // Clear the color buffer
-        
-        update_options(window, shader_program);
-        if (is_pressed(window, GLFW_KEY_ESCAPE)) break;
-        
-        shader_program.use();
-        // framebuffer.bind();
-        palette.bind();
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        // framebuffer.unbind();
-
+        {
+            update_uniforms(app.window, app.shader_program);
+            glClearColor(0.12f, 0.1f, 0.12f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT); // Clear the color buffer
+            
+            if (is_pressed(app.window, GLFW_KEY_ESCAPE)) break;
+            
+            app.shader_program.use();
+            palette.bind();
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        }
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        glfwSwapBuffers(window);      // Swap front and back buffers
-        glfwPollEvents();             // Process events
+        glfwSwapBuffers(app.window);      // Swap front and back buffers
     }
 
     ImGui_ImplOpenGL3_Shutdown();
