@@ -2,7 +2,7 @@ name: Build (Linux & Windows, Static & Dynamic)
 
 on:
   push:
-    branches: [ main actions-testing ]
+    branches: [ main, actions-testing ]
   pull_request:
     branches: [ main ]
 
