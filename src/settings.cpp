@@ -14,24 +14,24 @@ int iterations = 125;
 
 // other globals
 bool show_ui = true;
-
+bool ssaa_toggle = true;
 bool auto_zoom_in = false;
 bool auto_zoom_out = false;
 double pan_speed = 0.01;
 double zoom_speed = 1.005;
 
 
-// Add these global variables with your other globals
+// local
 bool is_dragging = false;
 double last_mouse_x = 0.0;
 double last_mouse_y = 0.0;
 double mouse_pan_speed = 0.002; // Adjust this to control panning sensitivity
 
 void update_options(GLFWwindow* window) {
-    if (is_pressed(window, GLFW_KEY_W)) camera_y += pan_speed * zoom;
-    if (is_pressed(window, GLFW_KEY_A)) camera_x -= pan_speed * zoom;
-    if (is_pressed(window, GLFW_KEY_S)) camera_y -= pan_speed * zoom;
-    if (is_pressed(window, GLFW_KEY_D)) camera_x += pan_speed * zoom;
+    if (is_pressed(window, GLFW_KEY_W)) camera_y += pan_speed / zoom;
+    if (is_pressed(window, GLFW_KEY_A)) camera_x -= pan_speed / zoom;
+    if (is_pressed(window, GLFW_KEY_S)) camera_y -= pan_speed / zoom;
+    if (is_pressed(window, GLFW_KEY_D)) camera_x += pan_speed / zoom;
     if (auto_zoom_out || is_pressed(window, GLFW_KEY_Q)) zoom /= zoom_speed;
     if (auto_zoom_in || is_pressed(window, GLFW_KEY_E)) zoom *= zoom_speed;
 

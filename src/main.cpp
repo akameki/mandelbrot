@@ -16,6 +16,7 @@
 
 #include "fragment.frag"
 #include "vertex.vert"
+#include "passthrough.frag"
 
 // #include <SDL2/SDL.h>
 // #include <SDL2/SDL_mixer.h>
@@ -115,19 +116,26 @@ int main(int argc, char** argv) {
     /* shader program */
     if (!app.shader_program.attach_from_string(GL_VERTEX_SHADER, vertex_shader_str)) return -1;
     if (!app.shader_program.attach_from_string(GL_FRAGMENT_SHADER, fragment_shader_str)) return -1;
-    
     app.shader_program.link();
     app.shader_program.use();
 
-    // framebuffer to render into.
-    // currently not in use.
-    // FrameBuffer framebuffer{width, height};
+    /* SSAA shader */
+    ShaderProgram ssaaShader;
+    if (!ssaaShader.attach_from_string(GL_VERTEX_SHADER, vertex_shader_str)) return 01;
+    if (!ssaaShader.attach_from_string(GL_FRAGMENT_SHADER, passthrough_fragment_shader_str)) return -1;
+    ssaaShader.link();
+    ssaaShader.use();
+
+    // framebuffer for SSAA.
+    // should eventually be used for storing fractal when iterations/camera doesn't change.
+    FrameBuffer ssFramebuffer{width * 2, height * 2};
 
     float vertices[] = {
-        -1.0f, -1.0f, 0.0f, // bl
-        -1.0f,  1.0f, 0.0f, // tl
-         1.0f,  1.0f, 0.0f, // tr
-         1.0f, -1.0f, 0.0f, // br
+      // pos           // tex
+        -1.0f, -1.0f,     0.0f, 0.0f, // bl
+        -1.0f,  1.0f,     0.0f, 1.0f, // tl
+         1.0f,  1.0f,     1.0f, 1.0f, // tr
+         1.0f, -1.0f,     1.0f, 0.0f, // br
     };
     unsigned int indices[] = { 0, 1, 2,  0, 2, 3 };
 
@@ -142,8 +150,10 @@ int main(int argc, char** argv) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)(2*sizeof(float)));
 
     glUniform1i(app.shader_program.uniform_location("iterations"), iterations);
 
@@ -157,6 +167,8 @@ int main(int argc, char** argv) {
     while (!glfwWindowShouldClose(app.window)) {
         glfwPollEvents();             // Process events
         
+        if (is_pressed(app.window, GLFW_KEY_ESCAPE)) break;
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -171,6 +183,8 @@ int main(int argc, char** argv) {
             }
             palette.draw_ui();
             imgui_camera_ui();
+            ImGui::SeparatorText("Graphics");
+            ImGui::Checkbox("SSAA", &ssaa_toggle);
             ImGui::Separator();
             ImGui::Text("%.1f FPS", imGuiIO.Framerate);
             
@@ -178,18 +192,35 @@ int main(int argc, char** argv) {
         }
         
         update_options(app.window);
+        palette.update();
 
         {
             update_uniforms(app.window, app.shader_program);
             glClearColor(0.12f, 0.1f, 0.12f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT); // Clear the color buffer
             
-            if (is_pressed(app.window, GLFW_KEY_ESCAPE)) break;
-            
+
+            // first pass (render)
+            int ssaa_factor = ssaa_toggle ? 2 : 1;
+            ssFramebuffer.rescale(width*ssaa_factor, height*ssaa_factor); // TODO: move to callback
+            ssFramebuffer.bind();
+            glViewport(0, 0, width*ssaa_factor, height*ssaa_factor);
             app.shader_program.use();
-            palette.update();
+            glActiveTexture(GL_TEXTURE0);
             palette.bind();
+            glUniform1i(app.shader_program.uniform_location("palette"), 0);
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            ssFramebuffer.unbind();
+            
+            // second pass (possibly downsample)
+            glViewport(0, 0, width, height);
+            glClear(GL_COLOR_BUFFER_BIT); // maybe
+            ssaaShader.use();
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, ssFramebuffer.texture_id);
+            glUniform1i(ssaaShader.uniform_location("superTexture"), 1);
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            app.shader_program.use();
         }
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -208,5 +239,5 @@ int main(int argc, char** argv) {
 void framebuffer_size_callback(GLFWwindow* window, int w, int h) {
     width = w;
     height = h;
-    glViewport(0, 0, width, height);
+    // glViewport(0, 0, width, height);
 }

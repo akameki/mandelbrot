@@ -30,15 +30,23 @@ FrameBuffer::FrameBuffer(int width, int height) {
 }
 
 void FrameBuffer::rescale(int width, int height) {
-    glViewport(0, 0, width, height);
+    bind();
+    
     glBindTexture(GL_TEXTURE_2D, texture_id);
-    glBindRenderbuffer(1, renderbuffer_id);
-
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0);
+    
+    glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer_id);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, renderbuffer_id);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete after resize!" << std::endl;
+    }
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    unbind();
 }
 
 void FrameBuffer::bind() { glBindFramebuffer(GL_FRAMEBUFFER, id); }

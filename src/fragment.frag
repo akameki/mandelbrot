@@ -2,7 +2,7 @@ const char* fragment_shader_str = R"(
 
 #version 460 core
 out vec4 FragColor;
-in vec3 pos;
+in vec2 pos;
 
 uniform vec2 resolution;
 uniform float time;

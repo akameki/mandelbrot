@@ -13,6 +13,7 @@ extern double zoom;
 extern int iterations;
 
 extern bool show_ui;
+extern bool ssaa_toggle;
 
 void update_options(GLFWwindow* window);
 void update_uniforms(GLFWwindow* window, ShaderProgram& sp);
