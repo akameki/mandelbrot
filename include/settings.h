@@ -11,11 +11,12 @@ extern double camera_x;
 extern double camera_y;
 extern double zoom;
 extern int iterations;
+extern bool recalculate_fractal;
 
 extern bool show_ui;
 extern bool ssaa_toggle;
 
-void update_options(GLFWwindow* window);
+void update_camera(GLFWwindow* window);
 void update_uniforms(GLFWwindow* window, ShaderProgram& sp);
 bool is_pressed(GLFWwindow* window, int key);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);

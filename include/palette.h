@@ -8,9 +8,10 @@
 struct Fn {
     std::string label;
     float r, g, b;
+    float y_scale = 1.0f;
     float x_offset = 0.0f;
     float x_scale = 0.3f;
-    float t_scale = 1.0f;
+    float t_scale = 0.5f;
     bool show_controls = true;
     
     Fn(std::string label, float r, float g, float b);

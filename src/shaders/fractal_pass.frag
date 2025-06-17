@@ -1,7 +1,6 @@
-const char* fragment_shader_str = R"(
+const char* fractal_pass_fragment_str = R"(
 
 #version 460 core
-out vec4 FragColor;
 in vec2 pos;
 
 uniform vec2 resolution;
@@ -11,7 +10,8 @@ uniform double zoom;
 
 uniform int iterations;
 
-uniform sampler1D palette;
+// out vec4 FragColor;
+layout(location = 0) out float escapeIter;
 
 /*  Mandelbrot set
  *  The set of complex numbers c,
@@ -26,15 +26,7 @@ dvec2 square_complex(dvec2 complex) {
     return res;
 }
 
-// vec4 color(int i) {
-//     float pct = 1 - i / float(iterations);
-//     // vec3 pd = vec3(0.9, 1.3, 1.1);
-//     vec3 pd = 5 * vec3(1.3, 1.1, 0.9); // black-blue
-//     // vec3 pd = vec3(10.28, 11.0, 9.35);
-//     return vec4(0.5-(cos(pct * pd))/2, 1.0);
-// }
-
-// returns: # iterations to reach escape condition
+// returns # iterations to reach escape condition
 // for true mandelbrot, the parameter z is always 0, it's only ever modified within the loop.
 int mandel(dvec2 z, dvec2 c) {
     for (int i = 1; i <= iterations; i++) {
@@ -54,8 +46,10 @@ void main() {
         pos.y * 1.0/zoom
     );
     // mandel returns 1 ~ iterations+1
-    float t = mandel(dvec2(0.0,0.0), coords) - 1;
-    FragColor = texture(palette, t / float(iterations+1) + 0.000001);
+    float t = mandel(dvec2(0.0,0.0), coords) - 1.0;
+    escapeIter = t;
+    // FragColor = texture(palette, t / float(iterations+1) + 0.000001);
+    // FragColor = vec4(t / (iterations + 1));
 }
     // show color palette on bottom:
     // if (pos.y < -0.958) FragColor = vec4(0.7,0.7,0.7,1.0);

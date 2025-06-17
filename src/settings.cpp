@@ -20,20 +20,22 @@ bool auto_zoom_out = false;
 double pan_speed = 0.01;
 double zoom_speed = 1.005;
 
+bool recalculate_fractal = true;
+void moved() { recalculate_fractal = true; }
 
-// local
 bool is_dragging = false;
 double last_mouse_x = 0.0;
 double last_mouse_y = 0.0;
 double mouse_pan_speed = 0.002; // Adjust this to control panning sensitivity
 
-void update_options(GLFWwindow* window) {
-    if (is_pressed(window, GLFW_KEY_W)) camera_y += pan_speed / zoom;
-    if (is_pressed(window, GLFW_KEY_A)) camera_x -= pan_speed / zoom;
-    if (is_pressed(window, GLFW_KEY_S)) camera_y -= pan_speed / zoom;
-    if (is_pressed(window, GLFW_KEY_D)) camera_x += pan_speed / zoom;
-    if (auto_zoom_out || is_pressed(window, GLFW_KEY_Q)) zoom /= zoom_speed;
-    if (auto_zoom_in || is_pressed(window, GLFW_KEY_E)) zoom *= zoom_speed;
+
+void update_camera(GLFWwindow* window) {
+    if (is_pressed(window, GLFW_KEY_W)) camera_y += pan_speed / zoom, moved();
+    if (is_pressed(window, GLFW_KEY_A)) camera_x -= pan_speed / zoom, moved();
+    if (is_pressed(window, GLFW_KEY_S)) camera_y -= pan_speed / zoom, moved();
+    if (is_pressed(window, GLFW_KEY_D)) camera_x += pan_speed / zoom, moved();
+    if (auto_zoom_out || is_pressed(window, GLFW_KEY_Q)) zoom /= zoom_speed, moved();
+    if (auto_zoom_in || is_pressed(window, GLFW_KEY_E)) zoom *= zoom_speed, moved();
 
     if (is_dragging) {
         double mouse_x, mouse_y;
@@ -41,13 +43,18 @@ void update_options(GLFWwindow* window) {
         
         double dx = (mouse_x - last_mouse_x) * 2.0 / width;
         double dy = (mouse_y - last_mouse_y) * 2.0 / height;
-        
-        double aspect = (double)width / (double)height;
-        camera_x -= dx * aspect * 1.0/zoom;
-        camera_y += dy * 1.0/zoom;
-        
-        last_mouse_x = mouse_x;
-        last_mouse_y = mouse_y;
+
+        if (dx != 0.0 || dy != 0.0) {
+            double aspect = (double)width / (double)height;
+            camera_x -= dx * aspect * 1.0/zoom;
+            camera_y += dy * 1.0/zoom;
+            
+            last_mouse_x = mouse_x;
+            last_mouse_y = mouse_y;
+    
+            moved();
+        }
+
     }
 }
 
@@ -108,6 +115,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
 
     camera_x = fractal_target_x - fractal_mouse_x / zoom;
     camera_y = fractal_target_y - fractal_mouse_y / zoom;
+    moved();
 }
 
 void imgui_camera_ui() {
@@ -118,11 +126,11 @@ void imgui_camera_ui() {
     // ImGui::PushItemWidth(160); // with arrows
     ImGui::PushItemWidth(120);
     ImGui::AlignTextToFramePadding(); ImGui::Text("x=   "); ImGui::SameLine();
-    ImGui::InputDouble("##cam_x", &camera_x, 0.0, 0.0, "%15.12f");
+    if (ImGui::InputDouble("##cam_x", &camera_x, 0.0, 0.0, "%15.12f")) moved();
     ImGui::AlignTextToFramePadding(); ImGui::Text("y=   "); ImGui::SameLine();
-    ImGui::InputDouble("##cam_y", &camera_y, 0.0, 0.0, "%15.12f");
+    if (ImGui::InputDouble("##cam_y", &camera_y, 0.0, 0.0, "%15.12f")) moved();
     ImGui::AlignTextToFramePadding(); ImGui::Text("zoom="); ImGui::SameLine();
-    ImGui::InputDouble("##zoom", &zoom, 0.0, 0.0, "%15.12f");
+    if (ImGui::InputDouble("##zoom", &zoom, 0.0, 0.0, "%15.12f")) moved();
 
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Auto zoom"); ImGui::SameLine();
@@ -134,5 +142,6 @@ void imgui_camera_ui() {
         camera_x = camera_y = 0.0;
         zoom = 0.5;
         auto_zoom_in = auto_zoom_out = false;
+        moved();
     }
 }

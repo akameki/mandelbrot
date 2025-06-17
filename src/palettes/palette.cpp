@@ -9,6 +9,12 @@
 #include "palette.h"
 #include "constants.h"
 
+Fn::Fn(std::string label, float r, float g, float b) : r(r) , g(g) , b(b) {}
+
+float Fn::operator()(float iteration) {
+    return y_scale * (0.5f + 0.5f * glm::cos(x_offset + iteration * x_scale + t_scale * ImGui::GetTime()));
+}
+
 Palette::Palette(int size) : num_colors(size) , reversed(false) {
     glGenTextures(1, &texture);
     bind();
@@ -21,11 +27,15 @@ Palette::Palette(int size) : num_colors(size) , reversed(false) {
 
     // create color channels
     channels = std::vector<Fn>{Fn("r", 1,0,0), Fn("g", 0,1,0), Fn("b", 0,0,1)};
-    channels[0].x_offset = 3.14f;
-    channels[1].x_offset = 3.87f;
-    channels[2].x_offset = 0.79f;
-    channels[0].x_scale = 0.3217f;
-    channels[1].x_scale = 0.1233f;
+    channels[0].x_offset = 0.0f;
+    channels[1].x_offset = PI/3.0f;
+    channels[2].x_offset = 2.0f*PI/3.0f;
+    channels[0].x_scale = 0.013f;
+    channels[1].x_scale = 0.033f;
+    channels[2].x_scale = 2.5f;
+    channels[0].y_scale = 0.8f;
+    channels[1].y_scale = 0.2f;
+    channels[2].y_scale = 1.0f;
 
     // Set the palette colors
     update();
@@ -139,44 +149,6 @@ void Palette::draw_ui() {
     // TODO: tooltip
 }
 
-Fn::Fn(std::string label, float r, float g, float b) : r(r) , g(g) , b(b) {}
-
-float Fn::operator()(float iteration) {
-    return 0.5f + 0.5f * glm::cos(x_offset + iteration * x_scale + t_scale * ImGui::GetTime());
-}
-
-// void Fn::draw_ui() {
-//     ImGui::PushID(this); // Ensure unique IDs for each channel
-    
-//     // Channel color indicator and toggle
-//     ImVec4 color(r, g, b, 1.0f);
-//     ImGui::ColorButton(label.c_str(), color, ImGuiColorEditFlags_NoTooltip, ImVec2(15,15));
-//     ImGui::SameLine();
-//     if (ImGui::Button(("hi" + label).c_str())) {
-//         show_controls = !show_controls;
-//     }
-    
-//     if (show_controls) {
-//         ImGui::Indent();
-        
-//         // Function display
-//         ImGui::Text("cos(%.3f + %.3fx + %.3ft)", x_offset, x_scale, t_scale);
-        
-//         // Parameter controls
-//         ImGui::PushItemWidth(100);
-//         ImGui::DragFloat("X Offset", &x_offset, 0.01f, -10.0f, 10.0f, "%.3f");
-//         ImGui::SameLine();
-//         ImGui::DragFloat("X Scale", &x_scale, 0.001f, -1.0f, 1.0f, "%.3f");
-//         ImGui::SameLine();
-//         ImGui::DragFloat("Time", &t_scale, 0.01f, -10.0f, 10.0f, "%.3f");
-//         ImGui::PopItemWidth();
-        
-//         ImGui::Unindent();
-//     }
-    
-//     ImGui::PopID();
-// }
-
 void Fn::draw_ui() {
     ImGui::PushID(this);
     
@@ -191,18 +163,20 @@ void Fn::draw_ui() {
     ImGui::SameLine();
     
     // Compact input controls
+    ImGui::DragFloat("##yscale", &y_scale, 0.01f, 0.0f, 1.0f, "%4.2f");
+    ImGui::SameLine();
     ImGui::AlignTextToFramePadding();
     ImGui::Text("cos(");
     ImGui::SameLine();
-    ImGui::DragFloat("##xoff", &x_offset, 0.01f, 0, PI, "%4.2f");
+    ImGui::DragFloat("##xoff", &x_offset, 0.01f, 0.0f, PI, "%4.2f");
     ImGui::SameLine();
     ImGui::Text(" ");
     ImGui::SameLine();
-    ImGui::DragFloat("##xscale", &x_scale, 0.001f, -1.f, 1.f, "%+5.2f");
+    ImGui::DragFloat("##xscale", &x_scale, 0.01f, 0.0f, PI, "%4.2f");
     ImGui::SameLine();
     ImGui::Text("i ");
     ImGui::SameLine();
-    ImGui::DragFloat("##time", &t_scale, 0.01f, -10.f, 10.f, "%+5.2f");
+    ImGui::DragFloat("##time", &t_scale, 0.01f, -5.0f, 5.0f, "%+5.2f");
     ImGui::SameLine();
     ImGui::Text("t)");
     ImGui::PopItemWidth();
