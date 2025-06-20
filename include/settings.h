@@ -30,7 +30,7 @@ struct PaletteState {
 };
 struct AppState {
     int width = 1200, height = 900;
-    double camera_x = 0.0, camera_y = 0.0, zoom = 0.5;
+    double camera_x = -0.65, camera_y = 0.0, zoom = 0.5;
     int max_iterations = 150;
     bool auto_zoom_in = false, auto_zoom_out = false;
     bool show_ui = true, use_ssaa = true;

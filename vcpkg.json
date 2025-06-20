@@ -10,7 +10,8 @@
       ]
     },
     "implot",
+    "nlohmann-json",
     "tinyfiledialogs",
-    "nlohmann-json"
+    "stb"
   ]
 }

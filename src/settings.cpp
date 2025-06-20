@@ -156,8 +156,9 @@ void imgui_camera_ui(App& app) {
     if (ImGui::Checkbox("Out", &state.auto_zoom_out)) state.auto_zoom_in = false;
 
     if (ImGui::Button("Reset")) {
-        state.camera_x = state.camera_y = 0.0;
-        state.zoom = 0.5;
+        state.camera_x = -0.65f;
+        state.camera_y = 0.0f;
+        state.zoom = 0.5f;
         state.auto_zoom_in = state.auto_zoom_out = false;
         state.mark_dirty();
     }

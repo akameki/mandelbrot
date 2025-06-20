@@ -5,6 +5,8 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "implot.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 #include <iostream>
 #include <thread>
@@ -162,6 +164,7 @@ int main(int argc, char** argv) {
     FrameBuffer paletted_fbuffer{state.width * 2, state.height * 2, FrameBuffer::Format::RGB8, false};
 
     Palette palette(&app.state.palette_state);
+    palette.update_filter();
     
     while (!glfwWindowShouldClose(app.window)) {
         glfwPollEvents();             // Process events
@@ -248,8 +251,37 @@ int main(int argc, char** argv) {
     }
 
     save_state(app, std::filesystem::absolute("mandelconfig"));
-    // std::system("hyprshot -m window -m active -o ~/.config -f mandelpaper");
-    // std::system("waypaper --wallpaper ~/.config/mandelpaper");
+
+    if (true) {
+        fractal_fbuffer.resize(1920*2, 1080*2);
+        paletted_fbuffer.resize(1920*2, 1080*2);
+        glViewport(0, 0, 1920*2, 1080*2);
+        fractal_fbuffer.bind();
+        fractal_shader.use();
+        glUniform2f(fractal_shader.uniform_location("resolution"), 16, 9);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        // second pass (color)
+        paletted_fbuffer.bind();
+        glClear(GL_COLOR_BUFFER_BIT);
+        palette_shader.use();
+        glActiveTexture(GL_TEXTURE0);
+        fractal_fbuffer.bind_texture();
+        glActiveTexture(GL_TEXTURE1);
+        palette.bind_texture();
+        glUniform1i(palette_shader.uniform_location("iterTex"), 0);
+        glUniform1i(palette_shader.uniform_location("paletteTex"), 1);
+        glUniform1i(palette_shader.uniform_location("iterations"), state.max_iterations);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        std::vector<unsigned char> pixels(1920*2*1080*2*3);
+        glReadBuffer(GL_COLOR_ATTACHMENT0); 
+        glReadPixels(0, 0, 1920*2, 1080*2, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+        stbi_flip_vertically_on_write(1);
+        stbi_write_png("/home/aki/.config/mandelpaper.png", 1920*2, 1080*2, 3, pixels.data(), 1920*2 * 3);
+
+        // std::system("hyprshot -m window -m active -o ~/.config -f mandelpaper");
+        std::system("waypaper --wallpaper ~/.config/mandelpaper.png");
+    }
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();

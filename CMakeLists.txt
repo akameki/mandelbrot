@@ -22,6 +22,7 @@ find_package(imgui CONFIG REQUIRED)
 find_package(implot CONFIG REQUIRED)
 find_package(tinyfiledialogs CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(Stb REQUIRED)
 # find_package(SDL2 CONFIG REQUIRED)
 # find_package(SDL2_mixer CONFIG REQUIRED)
 
@@ -37,6 +38,9 @@ target_link_libraries(mandelbrot PRIVATE
     # SDL2::SDL2main
 )
 # target_link_libraries(mandelbrot PRIVATE $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>)
+target_include_directories(mandelbrot PRIVATE ${Stb_INCLUDE_DIR})
+target_include_directories(mandelbrot PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(mandelbrot PRIVATE ${PROJECT_SOURCE_DIR}/external)
 
 # do not create a console when running as .exe
 if(WIN32 AND CMAKE_BUILD_TYPE MATCHES "Release" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
@@ -44,6 +48,3 @@ if(WIN32 AND CMAKE_BUILD_TYPE MATCHES "Release" AND CMAKE_CXX_COMPILER_ID MATCHE
 elseif(WIN32 AND CMAKE_BUILD_TYPE MATCHES "Release" AND CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     target_link_options(mandelbrot PRIVATE "/SUBSYSTEM:WINDOWS")
 endif()
-
-target_include_directories(mandelbrot PRIVATE ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(mandelbrot PRIVATE ${PROJECT_SOURCE_DIR}/external)

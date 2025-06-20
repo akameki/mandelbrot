@@ -26,22 +26,17 @@ Palette::Palette(PaletteState* state) : state(state) {
     // TODO: figure out where this logic show go?
     if (state->channels.empty()) {
         state->channels["red"].color.x = 1.0f;
-        state->channels["red"].y_scale = 0.8f;
-        state->channels["red"].x_scale = 0.013f;
-        state->channels["red"].x_offset = 0.0f;
+        state->channels["red"].x_scale = 0.23f;
         state->channels["green"].color.y = 1.0f;
-        state->channels["green"].y_scale = 0.2f;
-        state->channels["green"].x_offset = PI/3.0f;
-        state->channels["green"].x_scale = 0.033f;
+        state->channels["green"].x_scale = 0.24f;
         state->channels["blue"].color.z = 1.0f;
-        state->channels["blue"].x_offset = 2.0f*PI/3.0f;
-        state->channels["blue"].x_scale = 2.5f;
-        state->channels["blue"].y_scale = 1.0f;
+        state->channels["blue"].x_scale = 0.25f;
     }
 
     // Set the palette colors
     // generate();
     // glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB, state->num_colors, 0, GL_RGB, GL_FLOAT, colors.data());
+    update_filter();
     unbind_texture();
 }
 
