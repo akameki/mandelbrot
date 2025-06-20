@@ -16,11 +16,11 @@ out vec4 FragColor;
 void main() {
     float iter = texture(iterTex, tex).r;
 
-    float t = iter / float(iterations + 1) + 0.000001;
+    float t = (iter - 0.5) / float(iterations + 1);
     FragColor = texture(paletteTex, t);
     // vec4 color = texture(paletteTex, t);
 
-    // FragColor = vec4(color.x, tex.y, iter, 1.0); // debug
+    // FragColor = vec4(t, t, t, 1.0); // debug
     // FragColor = vec4(pos.x, pos.y, iter, 1.0); // debug
 }
 

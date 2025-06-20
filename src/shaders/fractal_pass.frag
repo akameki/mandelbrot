@@ -27,13 +27,14 @@ dvec2 square_complex(dvec2 complex) {
 }
 
 // returns # iterations to reach escape condition
-// for true mandelbrot, the parameter z is always 0, it's only ever modified within the loop.
-int mandel(dvec2 z, dvec2 c) {
+// for mandelbrot, the parameter z should be (0,0).
+float mandel(dvec2 z, dvec2 c) {
     for (int i = 1; i <= iterations; i++) {
-        // escape condition: modulus > 2
         z = square_complex(z) + c;
-        if (length(z) > 2) {
-            return i;
+        if (length(z) > (1 << 16)) {
+            float log_zn = log(float(z.x*z.x + z.y*z.y)) / 2.0;
+            float nu = log(log_zn / log(2.0)) / log(2.0);
+            return i + 1.0 - nu;
         }
     }
     return iterations + 1;
@@ -46,8 +47,7 @@ void main() {
         pos.y * 1.0/zoom
     );
     // mandel returns 1 ~ iterations+1
-    float t = mandel(dvec2(0.0,0.0), coords) - 1.0;
-    escapeIter = t;
+    escapeIter = mandel(dvec2(0.0,0.0), coords);
     // FragColor = texture(palette, t / float(iterations+1) + 0.000001);
     // FragColor = vec4(t / (iterations + 1));
 }
