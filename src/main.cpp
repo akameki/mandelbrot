@@ -35,16 +35,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 }
 #endif
 
-class App {
+class DepraApp {
 public:
     GLFWwindow* window;
     ShaderProgram shader_program;
     // Palette palette;
 
-    // App() {}
+    // DepraApp() {}
 };
 
-// void renderThread(App* app) {
+// void renderThread(DepraApp* app) {
 //     glfwMakeContextCurrent(app->window);
 //     while (!glfwWindowShouldClose(app->window)) {
 //         update_uniforms(app->window, app->shader_program);
@@ -62,22 +62,25 @@ public:
 // }
 
 int main(int argc, char** argv) {
+    App app;
+    AppState& state = app.state;
     /* GLFW */
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         return -1;
     }
-    GLFWwindow* window = glfwCreateWindow(width, height, "Mandelbrot Explorer", nullptr, nullptr);
-    if (!window) {
+    app.window = glfwCreateWindow(750, 800, "Mandelbrot Explorer", nullptr, nullptr);
+    glfwSetWindowUserPointer(app.window, &app);
+    if (!app.window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
     }
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
-    glfwSetScrollCallback(window, scroll_callback);
+    glfwMakeContextCurrent(app.window);
+    glfwSetFramebufferSizeCallback(app.window, framebuffer_size_callback);
+    glfwSetKeyCallback(app.window, key_callback);
+    glfwSetMouseButtonCallback(app.window, mouse_button_callback);
+    glfwSetScrollCallback(app.window, scroll_callback);
 
     /* GLAD */
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -95,7 +98,7 @@ int main(int argc, char** argv) {
     imGuiIO.LogFilename = NULL;
 
     ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplGlfw_InitForOpenGL(app.window, true);
     ImGui_ImplOpenGL3_Init("#version 460");
 
     /* SDL2 */
@@ -111,14 +114,14 @@ int main(int argc, char** argv) {
     // Mix_Music* music = Mix_LoadMUS_RW(rw, 1);
     // Mix_PlayMusic(music, -1);
 
-    App app;
-    app.window = window;
+    // DepraApp app;
 
     /* fractal iterator shader */
-    if (!app.shader_program.attach_from_string(GL_VERTEX_SHADER, vertex_shader_str)) return -1;
-    if (!app.shader_program.attach_from_string(GL_FRAGMENT_SHADER, fractal_pass_fragment_str)) return -1;
-    app.shader_program.link();
-    app.shader_program.use();
+    ShaderProgram fractal_shader;
+    if (!fractal_shader.attach_from_string(GL_VERTEX_SHADER, vertex_shader_str)) return -1;
+    if (!fractal_shader.attach_from_string(GL_FRAGMENT_SHADER, fractal_pass_fragment_str)) return -1;
+    fractal_shader.link();
+    fractal_shader.use();
     
     /* palette shader */
     ShaderProgram paletteShader;
@@ -159,7 +162,7 @@ int main(int argc, char** argv) {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)(2*sizeof(float)));
 
-    glUniform1i(app.shader_program.uniform_location("iterations"), iterations);
+    glUniform1i(fractal_shader.uniform_location("iterations"), state.max_iterations);
 
     
     // std::thread renderer(renderThread, &app);
@@ -168,36 +171,36 @@ int main(int argc, char** argv) {
 
     // framebuffer for SSAA.
     // should eventually be used for storing fractal when iterations/camera doesn't change.
-    FrameBuffer iterFramebuffer(width * 2, height * 2, FrameBuffer::Format::R32F, false);
-    FrameBuffer coloredFramebuffer{width * 2, height * 2, FrameBuffer::Format::RGB8, false};
+    FrameBuffer iterFramebuffer(state.width * 2, state.height * 2, FrameBuffer::Format::R32F, false);
+    FrameBuffer coloredFramebuffer{state.width * 2, state.height * 2, FrameBuffer::Format::RGB8, false};
 
-    Palette palette(iterations + 1);
+    Palette palette(state.max_iterations + 1);
     
     while (!glfwWindowShouldClose(app.window)) {
         glfwPollEvents();             // Process events
         
         if (is_pressed(app.window, GLFW_KEY_ESCAPE)) break;
 
-        app.shader_program.use();
+        fractal_shader.use();
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         bool show_demo_window = true;
         // ImGui::ShowDemoWindow(&show_demo_window);
-        if (show_ui) {
+        if (state.show_ui) {
             ImGui::Begin("Mandelbrot");
             // ImDrawList* draw_list = ImGui::GetWindowDrawList();
             ImGui::PushItemWidth(-FLT_MIN);
-            if (ImGui::SliderInt("##iterations", &iterations, 1, 500, "Iterations = %d")) {
-                palette.resize(iterations + 1);
-                recalculate_fractal = true;
+            if (ImGui::SliderInt("##iterations", &state.max_iterations, 1, 500, "Iterations = %d")) {
+                palette.resize(state.max_iterations + 1);
+                state.dirty_fractal = true;
             }
             palette.draw_ui();
-            imgui_camera_ui();
+            imgui_camera_ui(app);
             ImGui::SeparatorText("Graphics");
-            if (ImGui::Checkbox("SSAA", &ssaa_toggle)) {
-                recalculate_fractal = true;
+            if (ImGui::Checkbox("SSAA", &state.use_ssaa)) {
+                state.dirty_fractal = true;
             };
             ImGui::Separator();
             ImGui::Text("%.1f FPS", imGuiIO.Framerate);
@@ -205,30 +208,35 @@ int main(int argc, char** argv) {
             ImGui::End();
         }
         
-        update_camera(app.window);
+        update_camera(app);
         palette.update();
 
         {
-            update_uniforms(app.window, app.shader_program);
+            update_uniforms(app, fractal_shader);
             glClearColor(0.12f, 0.1f, 0.12f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
             
-            int ssaa_factor = ssaa_toggle ? 2 : 1;
+            int fractal_res_width = state.width;
+            int fractal_res_height = state.height;
+            if (state.use_ssaa) {
+                fractal_res_width *= 2;
+                fractal_res_height *= 2;
+            }
             
             // first pass (iterations)
-            if (recalculate_fractal) {
-                recalculate_fractal = false;
-                iterFramebuffer.rescale(width*ssaa_factor, height*ssaa_factor); // TODO: move to callback
+            if (state.dirty_fractal) {
+                state.dirty_fractal = false;
+                iterFramebuffer.rescale(fractal_res_width, fractal_res_height); // TODO: move to callback
                 iterFramebuffer.bind();
-                glViewport(0, 0, width*ssaa_factor, height*ssaa_factor);
-                app.shader_program.use();
+                glViewport(0, 0, fractal_res_width, fractal_res_height);
+                fractal_shader.use();
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             }
             // second pass (color)
-            coloredFramebuffer.rescale(width*ssaa_factor, height*ssaa_factor);
+            coloredFramebuffer.rescale(fractal_res_width, fractal_res_height);
             coloredFramebuffer.bind();
             glClear(GL_COLOR_BUFFER_BIT);
-            glViewport(0, 0, width*ssaa_factor, height*ssaa_factor);
+            glViewport(0, 0, fractal_res_width, fractal_res_height);
             paletteShader.use();
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, iterFramebuffer.texture_id);
@@ -236,13 +244,13 @@ int main(int argc, char** argv) {
             palette.bind();
             glUniform1i(paletteShader.uniform_location("iterTex"), 0);
             glUniform1i(paletteShader.uniform_location("paletteTex"), 1);
-            glUniform1i(paletteShader.uniform_location("iterations"), iterations);
+            glUniform1i(paletteShader.uniform_location("iterations"), state.max_iterations);
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             
             // thirds pass (downsample, sometimes)
             coloredFramebuffer.unbind();
             glClear(GL_COLOR_BUFFER_BIT);
-            glViewport(0, 0, width, height);
+            glViewport(0, 0, state.width, state.height);
             ssaaShader.use();
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, coloredFramebuffer.texture_id);
@@ -264,8 +272,10 @@ int main(int argc, char** argv) {
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int w, int h) {
-    width = w;
-    height = h;
-    recalculate_fractal = true;
+    App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
+    AppState& state = app->state;
+    state.width = w;
+    state.height = h;
+    state.dirty_fractal = true;
     // glViewport(0, 0, width, height);
 }
