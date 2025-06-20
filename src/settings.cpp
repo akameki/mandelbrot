@@ -1,8 +1,44 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <string>
+#include <nlohmann/json.hpp>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include "imgui.h"
 #include "settings.h"
 #include "shader.h"
+
+using json = nlohmann::json;
+
+void load_state(App& app, const std::filesystem::path& path) {
+    std::ifstream f(path);
+    if (!f.is_open()) {
+        std::cerr << "Failed to open file for loading state: " << path << std::endl;
+        return;
+    }
+    json data = json::parse(f);
+    try {
+        app.state = data.get<AppState>();
+        app.state.mark_dirty();
+    } catch (const json::exception& e) {
+        std::cerr << "Error parsing state file: " << e.what() << std::endl;
+        return;
+    }
+
+    f.close();
+}
+
+void save_state(App& app, const std::filesystem::path& path) {
+    std::ofstream f(path);
+    if (!f.is_open()) {
+        std::cerr << "Failed to open file for saving state: " << path << std::endl;
+        return;
+    }
+    json data = app.state;
+    f << data.dump(4);
+    f.close();
+}
 
 void update_camera(App& app) {
     GLFWwindow* window = app.window;

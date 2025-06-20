@@ -20,6 +20,8 @@ find_package(glm CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(implot CONFIG REQUIRED)
+find_package(tinyfiledialogs CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 # find_package(SDL2 CONFIG REQUIRED)
 # find_package(SDL2_mixer CONFIG REQUIRED)
 
@@ -29,6 +31,8 @@ target_link_libraries(mandelbrot PRIVATE
     glfw
     imgui::imgui
     implot::implot
+    tinyfiledialogs::tinyfiledialogs
+    nlohmann_json::nlohmann_json
     # SDL2::SDL2
     # SDL2::SDL2main
 )

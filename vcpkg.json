@@ -4,8 +4,13 @@
     "glm",
     {
       "name": "imgui",
-      "features": ["glfw-binding", "opengl3-binding"]
+      "features": [
+        "glfw-binding",
+        "opengl3-binding"
+      ]
     },
-    "implot"
+    "implot",
+    "tinyfiledialogs",
+    "nlohmann-json"
   ]
 }

@@ -8,6 +8,8 @@
 
 #include <iostream>
 #include <thread>
+#include <filesystem>
+#include <cstdlib>
 
 #include "shader.h"
 #include "framebuffer.h"
@@ -35,15 +37,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 }
 #endif
 
-class DepraApp {
-public:
-    GLFWwindow* window;
-    ShaderProgram shader_program;
-    // Palette palette;
-
-    // DepraApp() {}
-};
-
 // void renderThread(DepraApp* app) {
 //     glfwMakeContextCurrent(app->window);
 //     while (!glfwWindowShouldClose(app->window)) {
@@ -64,12 +57,13 @@ public:
 int main(int argc, char** argv) {
     App app;
     AppState& state = app.state;
+    load_state(app, std::filesystem::absolute("mandelconfig"));
     /* GLFW */
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         return -1;
     }
-    app.window = glfwCreateWindow(750, 800, "Mandelbrot Explorer", nullptr, nullptr);
+    app.window = glfwCreateWindow(state.width, state.height, "Mandelbrot Explorer", nullptr, nullptr);
     glfwSetWindowUserPointer(app.window, &app);
     if (!app.window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -114,28 +108,23 @@ int main(int argc, char** argv) {
     // Mix_Music* music = Mix_LoadMUS_RW(rw, 1);
     // Mix_PlayMusic(music, -1);
 
-    // DepraApp app;
-
-    /* fractal iterator shader */
     ShaderProgram fractal_shader;
     if (!fractal_shader.attach_from_string(GL_VERTEX_SHADER, vertex_shader_str)) return -1;
     if (!fractal_shader.attach_from_string(GL_FRAGMENT_SHADER, fractal_pass_fragment_str)) return -1;
     fractal_shader.link();
     fractal_shader.use();
     
-    /* palette shader */
-    ShaderProgram paletteShader;
-    if (!paletteShader.attach_from_string(GL_VERTEX_SHADER, vertex_shader_str)) return -1;
-    if (!paletteShader.attach_from_string(GL_FRAGMENT_SHADER, palette_pass_shader_str)) return -1;
-    paletteShader.link();
-    paletteShader.use();
+    ShaderProgram palette_shader;
+    if (!palette_shader.attach_from_string(GL_VERTEX_SHADER, vertex_shader_str)) return -1;
+    if (!palette_shader.attach_from_string(GL_FRAGMENT_SHADER, palette_pass_shader_str)) return -1;
+    palette_shader.link();
+    palette_shader.use();
 
-    /* SSAA shader */
-    ShaderProgram ssaaShader;
-    if (!ssaaShader.attach_from_string(GL_VERTEX_SHADER, vertex_shader_str)) return -1;
-    if (!ssaaShader.attach_from_string(GL_FRAGMENT_SHADER, passthrough_fragment_shader_str)) return -1;
-    ssaaShader.link();
-    ssaaShader.use();
+    ShaderProgram passthrough_shader;
+    if (!passthrough_shader.attach_from_string(GL_VERTEX_SHADER, vertex_shader_str)) return -1;
+    if (!passthrough_shader.attach_from_string(GL_FRAGMENT_SHADER, passthrough_fragment_shader_str)) return -1;
+    passthrough_shader.link();
+    passthrough_shader.use();
 
     float vertices[] = {
       // pos           // tex
@@ -169,12 +158,10 @@ int main(int argc, char** argv) {
 
     // glfwSwapInterval(0); // disable vsync
 
-    // framebuffer for SSAA.
-    // should eventually be used for storing fractal when iterations/camera doesn't change.
-    FrameBuffer iterFramebuffer(state.width * 2, state.height * 2, FrameBuffer::Format::R32F, false);
-    FrameBuffer coloredFramebuffer{state.width * 2, state.height * 2, FrameBuffer::Format::RGB8, false};
+    FrameBuffer fractal_fbuffer(state.width * 2, state.height * 2, FrameBuffer::Format::R32F, false);
+    FrameBuffer paletted_fbuffer{state.width * 2, state.height * 2, FrameBuffer::Format::RGB8, false};
 
-    Palette palette(state.max_iterations + 1);
+    Palette palette(&app.state.palette_state);
     
     while (!glfwWindowShouldClose(app.window)) {
         glfwPollEvents();             // Process events
@@ -192,16 +179,13 @@ int main(int argc, char** argv) {
             ImGui::Begin("Mandelbrot");
             // ImDrawList* draw_list = ImGui::GetWindowDrawList();
             ImGui::PushItemWidth(-FLT_MIN);
-            if (ImGui::SliderInt("##iterations", &state.max_iterations, 1, 500, "Iterations = %d")) {
-                palette.resize(state.max_iterations + 1);
-                state.dirty_fractal = true;
-            }
+            if (ImGui::SliderInt("##iterations", &state.max_iterations, 1, 500, "Iterations = %d")) state.dirty_fractal = true;
             palette.draw_ui();
             imgui_camera_ui(app);
             ImGui::SeparatorText("Graphics");
-            if (ImGui::Checkbox("SSAA", &state.use_ssaa)) {
-                state.dirty_fractal = true;
-            };
+            if (ImGui::Checkbox("SSAA", &state.use_ssaa)) state.dirty_fractal = true;
+            ImGui::SameLine();
+            if (ImGui::Checkbox("Smooth coloring", &state.palette_state.use_smooth)) palette.update_filter();
             ImGui::Separator();
             ImGui::Text("%.1f FPS", imGuiIO.Framerate);
             
@@ -209,10 +193,10 @@ int main(int argc, char** argv) {
         }
         
         update_camera(app);
-        palette.update();
+        palette.generate(state.max_iterations + 1);
+        update_uniforms(app, fractal_shader);
 
         {
-            update_uniforms(app, fractal_shader);
             glClearColor(0.12f, 0.1f, 0.12f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
             
@@ -226,35 +210,35 @@ int main(int argc, char** argv) {
             // first pass (iterations)
             if (state.dirty_fractal) {
                 state.dirty_fractal = false;
-                iterFramebuffer.rescale(fractal_res_width, fractal_res_height); // TODO: move to callback
-                iterFramebuffer.bind();
+                fractal_fbuffer.resize(fractal_res_width, fractal_res_height); // TODO: move to callback
+                fractal_fbuffer.bind();
                 glViewport(0, 0, fractal_res_width, fractal_res_height);
                 fractal_shader.use();
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             }
             // second pass (color)
-            coloredFramebuffer.rescale(fractal_res_width, fractal_res_height);
-            coloredFramebuffer.bind();
+            paletted_fbuffer.resize(fractal_res_width, fractal_res_height);
+            paletted_fbuffer.bind();
             glClear(GL_COLOR_BUFFER_BIT);
             glViewport(0, 0, fractal_res_width, fractal_res_height);
-            paletteShader.use();
+            palette_shader.use();
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, iterFramebuffer.texture_id);
+            fractal_fbuffer.bind_texture();
             glActiveTexture(GL_TEXTURE1);
-            palette.bind();
-            glUniform1i(paletteShader.uniform_location("iterTex"), 0);
-            glUniform1i(paletteShader.uniform_location("paletteTex"), 1);
-            glUniform1i(paletteShader.uniform_location("iterations"), state.max_iterations);
+            palette.bind_texture();
+            glUniform1i(palette_shader.uniform_location("iterTex"), 0);
+            glUniform1i(palette_shader.uniform_location("paletteTex"), 1);
+            glUniform1i(palette_shader.uniform_location("iterations"), state.max_iterations);
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             
             // thirds pass (downsample, sometimes)
-            coloredFramebuffer.unbind();
+            paletted_fbuffer.unbind();
             glClear(GL_COLOR_BUFFER_BIT);
             glViewport(0, 0, state.width, state.height);
-            ssaaShader.use();
+            passthrough_shader.use();
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, coloredFramebuffer.texture_id);
-            glUniform1i(ssaaShader.uniform_location("superTexture"), 0);
+            paletted_fbuffer.bind_texture();
+            glUniform1i(passthrough_shader.uniform_location("superTexture"), 0);
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         }
         ImGui::Render();
@@ -262,6 +246,10 @@ int main(int argc, char** argv) {
 
         glfwSwapBuffers(app.window);      // Swap front and back buffers
     }
+
+    save_state(app, std::filesystem::absolute("mandelconfig"));
+    // std::system("hyprshot -m window -m active -o ~/.config -f mandelpaper");
+    // std::system("waypaper --wallpaper ~/.config/mandelpaper");
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();

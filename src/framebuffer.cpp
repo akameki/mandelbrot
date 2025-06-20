@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-FrameBuffer::FrameBuffer(int width, int height, Format format, bool with_depth_stencil) : width(width), height(height) {
+FrameBuffer::FrameBuffer(int width, int height, Format format, bool with_depth_stencil = false) : width(width), height(height) {
     switch (format) {
         case Format::RGB8:
             m_format = GL_RGB;
@@ -20,55 +20,52 @@ FrameBuffer::FrameBuffer(int width, int height, Format format, bool with_depth_s
     glGenFramebuffers(1, &id);
     glGenTextures(1, &texture_id);
     bind();
-    glBindTexture(GL_TEXTURE_2D, texture_id);
+    bind_texture();
     glTexImage2D(GL_TEXTURE_2D, 0, m_format, width, height, 0, m_format_enum, m_type, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0);
 
-    if (with_depth_stencil) {
-        glGenRenderbuffers(1, &renderbuffer_id);
-        glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer_id);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, renderbuffer_id);
-        glBindRenderbuffer(GL_RENDERBUFFER, 0);
-    }
+    // if (with_depth_stencil) {
+    //     glGenRenderbuffers(1, &renderbuffer_id);
+    //     glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer_id);
+    //     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+    //     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, renderbuffer_id);
+    //     glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    // }
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        std::cerr << "Framebuffer not complete !?" << std::endl;
+        std::cerr << "ERROR::FRAMEBUFFER not complete after creating" << std::endl;
     }
 
-    rescale(width, height);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
+    unbind_texture();
     unbind();
 }
 
-void FrameBuffer::rescale(int new_width, int new_height) {
+void FrameBuffer::resize(int new_width, int new_height) {
     bind();
-    glBindTexture(GL_TEXTURE_2D, texture_id);
+    bind_texture();
     glTexImage2D(GL_TEXTURE_2D, 0, m_format, new_width, new_height, 0, m_format_enum, m_type, NULL);
 
-    // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0);
     
-    if (with_depth_stencil) {
-        glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer_id);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, new_width, new_height);
-        glBindRenderbuffer(GL_RENDERBUFFER, 0);
-        // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, renderbuffer_id);
-    }
+    // if (with_depth_stencil) {
+    //     glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer_id);
+    //     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, new_width, new_height);
+    //     glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    // }
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete after resize!" << std::endl;
+        std::cerr << "ERROR::FRAMEBUFFER:: not complete after resize" << std::endl;
     }
 
-    glBindTexture(GL_TEXTURE_2D, 0);
+    unbind_texture();
     unbind();
 }
 
 void FrameBuffer::bind() { glBindFramebuffer(GL_FRAMEBUFFER, id); }
-
 void FrameBuffer::unbind() { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
+void FrameBuffer::bind_texture() { glBindTexture(GL_TEXTURE_2D, texture_id); };
+void FrameBuffer::unbind_texture() { glBindTexture(GL_TEXTURE_2D, 0); };
 
 FrameBuffer::~FrameBuffer() {
     glDeleteFramebuffers(1, &id);

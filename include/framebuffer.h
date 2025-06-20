@@ -20,9 +20,11 @@ public:
     FrameBuffer& operator=(FrameBuffer&& other) = delete;
     ~FrameBuffer();
 
-    void rescale(int width, int height);
+    void resize(int width, int height);
     void bind();
     void unbind();
+    void bind_texture();
+    void unbind_texture();
 private:
     int width, height;
     bool with_depth_stencil;

@@ -31,13 +31,14 @@ dvec2 square_complex(dvec2 complex) {
 float mandel(dvec2 z, dvec2 c) {
     for (int i = 1; i <= iterations; i++) {
         z = square_complex(z) + c;
-        if (length(z) > (1 << 16)) {
+
+        if (length(z) > (1<<16)) {
             float log_zn = log(float(z.x*z.x + z.y*z.y)) / 2.0;
             float nu = log(log_zn / log(2.0)) / log(2.0);
             return i + 1.0 - nu;
         }
     }
-    return iterations + 1;
+    return iterations + 1; // no bailout; is in the set
 }
 
 void main() {

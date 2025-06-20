@@ -2,45 +2,30 @@
 #include <glad/glad.h>
 #include <glm/vec3.hpp>
 #include <vector>
+#include "settings.h"
 #include <string>
 
-    // `0.5f + 0.5f * cos(x_offset + iteration * x_scale + time_scale*secs);`
-struct Fn {
-    std::string label;
-    float r, g, b;
-    float y_scale = 1.0f;
-    float x_offset = 0.0f;
-    float x_scale = 0.3f;
-    float t_scale = 0.5f;
-    bool show_controls = true;
-    
-    Fn(std::string label, float r, float g, float b);
-    float operator()(float iteration);
-    void draw_ui();
-};
+// `0.5f + 0.5f * cos(x_offset + iteration * x_scale + time_scale*secs);`
+// float operator()(float iteration);
 
 // Manages a 1D texture of RGB colors, and the UI to control it.
 class Palette {
 private:
-    // look into overhead with using texture vs array
-
+    PaletteState* state;
     GLuint texture;
-    int num_colors;
-    std::vector<Fn> channels;
     std::vector<glm::vec3> colors;
-    bool reversed = false;
-    bool override = true;
-    glm::vec3 override_color {0.0f, 0.0f, 0.0f};
-
 public:
 
-    Palette(int size = 100);
+    Palette(PaletteState* state);
+    // bool add_channel(std::string& label);
+    void draw_channel_settings(const std::string& name, ChannelState& channel);
 
     void reverse();
-    void resize(int size);
-    void update();
-    void bind();
-    void unbind();
+    // void resize(int size);
+    void generate(int num_colors);
+    void update_filter();
+    void bind_texture();
+    void unbind_texture();
     void draw_ui();
 
 };
